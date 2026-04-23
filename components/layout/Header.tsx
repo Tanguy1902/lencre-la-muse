@@ -14,7 +14,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
-    { name: "Hizaha", href: "/" },
+    { name: "Hizaha", href: "/discover" },
     { name: "Tahiry", href: "/archive" },
     { name: "Hanoratra", href: "/write" },
   ];

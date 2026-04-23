@@ -6,20 +6,26 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PoemCard from "@/components/poems/PoemCard";
 import Button from "@/components/ui/Button";
-import { getUserProfile, getPoems, getBookmarkedPoems, followUser, unfollowUser, isFollowing, getFollowerCount } from "@/lib/firebase/firestore";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { getUserProfile, getPoems, getBookmarkedPoems, followUser, unfollowUser, isFollowing, getFollowerCount, deletePoem } from "@/lib/firebase/firestore";
 import { Poem, User } from "@/types";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [author, setAuthor] = useState<User | null>(null);
   const [poems, setPoems] = useState<Poem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"published" | "drafts" | "bookmarks">("published");
   const [following, setFollowing] = useState(false);
   const [stats, setStats] = useState({ publishedCount: 0, followerCount: 0 });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [poemToDelete, setPoemToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isOwner = user?.uid === id;
 
@@ -68,12 +74,37 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       if (following) {
         await unfollowUser(user.uid, id);
         setFollowing(false);
+        setStats(prev => ({ ...prev, followerCount: prev.followerCount - 1 }));
       } else {
         await followUser(user.uid, id);
         setFollowing(true);
+        setStats(prev => ({ ...prev, followerCount: prev.followerCount + 1 }));
       }
     } catch (error) {
       console.error("Nisy fahadisoana teo am-panarahana:", error);
+    }
+  };
+
+  const handleDeleteRequest = (poemId: string) => {
+    setPoemToDelete(poemId);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!poemToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deletePoem(poemToDelete);
+      setPoems(prev => prev.filter(p => p.id !== poemToDelete));
+      setStats(prev => ({ ...prev, publishedCount: Math.max(0, prev.publishedCount - 1) }));
+      showToast("Voafafa ny tononkalo", "success");
+    } catch (error) {
+      console.error("Nisy fahadisoana teo am-pamafana:", error);
+      showToast("Tsy afaka namafa ny tononkalo", "error");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setPoemToDelete(null);
     }
   };
 
@@ -204,10 +235,13 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 id={poem.id}
                 title={poem.title}
                 author={poem.authorName}
+                authorId={poem.authorId}
                 excerpt={poem.excerpt}
                 moods={poem.moods}
                 likesCount={poem.likesCount}
                 imageUrl={poem.imageUrl}
+                showDeleteButton={isOwner}
+                onDelete={handleDeleteRequest}
               />
             ))}
           </div>
@@ -218,7 +252,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                 ? "Miandry ny sanganasa tianao ity tahiry ity."
                 : activeTab === "drafts"
                 ? "Tsy misy vakiraoka an-dalam-panoratana."
-                : "Mbola tsy namela soratra teo amin&apos;ny taratasy ity mpanoratra ity."}
+                : "Mbola tsy namela soratra teo amin\u0027ny taratasy ity mpanoratra ity."}
             </div>
           )}
 
@@ -230,6 +264,19 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         </section>
       </main>
       <Footer />
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Hamafa ity tononkalo ity?"
+        message="Tsy azo averina intsony ity tononkalo ity rehefa voafafa. Ny hafatra rehetra sy ny tiako rehetra dia ho very koa."
+        confirmLabel="Hamafa"
+        cancelLabel="Hanafoana"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => { setShowDeleteModal(false); setPoemToDelete(null); }}
+        isLoading={isDeleting}
+      />
     </>
   );
 }

@@ -1,22 +1,33 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import MoodChip from "@/components/ui/MoodChip";
-import { getPoem, likePoem, toggleBookmark, isBookmarked } from "@/lib/firebase/firestore";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { getPoem, toggleLike, isLiked, toggleBookmark, isBookmarked, deletePoem } from "@/lib/firebase/firestore";
 import { Poem } from "@/types";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useToast } from "@/components/ui/Toast";
 import CommentSection from "@/components/poems/CommentSection";
 
 export default function PoemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const { user } = useAuth();
+  const router = useRouter();
+  const { showToast } = useToast();
   const [poem, setPoem] = useState<Poem | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLiking, setIsLiking] = useState(false);
+  const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isOwner = user?.uid === poem?.authorId;
 
   useEffect(() => {
     const fetchPoem = async () => {
@@ -24,8 +35,12 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
         const data = await getPoem(id);
         setPoem(data);
         if (user) {
-          const bookmarkedStatus = await isBookmarked(user.uid, id);
+          const [bookmarkedStatus, likedStatus] = await Promise.all([
+            isBookmarked(user.uid, id),
+            isLiked(user.uid, id),
+          ]);
           setBookmarked(bookmarkedStatus);
+          setLiked(likedStatus);
         }
       } catch (error) {
         console.error("Nisy fahadisoana teo am-pampidirana ny tononkalo:", error);
@@ -40,8 +55,9 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
     if (!user || !poem || isLiking) return;
     setIsLiking(true);
     try {
-      await likePoem(id, user.uid);
-      setPoem({ ...poem, likesCount: (poem.likesCount || 0) + 1 });
+      const nowLiked = await toggleLike(id, user.uid);
+      setLiked(nowLiked);
+      setPoem({ ...poem, likesCount: poem.likesCount + (nowLiked ? 1 : -1) });
     } catch (error) {
       console.error("Nisy fahadisoana teo am-pitiavana:", error);
     } finally {
@@ -54,8 +70,51 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
     try {
       const status = await toggleBookmark(user.uid, id);
       setBookmarked(status);
+      showToast(
+        status ? "Voatahiry ao amin'ny tahirinao" : "Voaesotra tao amin'ny tahirinao",
+        "success"
+      );
     } catch (error) {
       console.error("Nisy fahadisoana teo am-pitahirizana:", error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user || !poem || !isOwner) return;
+    setIsDeleting(true);
+    try {
+      await deletePoem(id);
+      showToast("Voafafa ny tononkalo", "success");
+      router.push(`/profile/${user.uid}`);
+    } catch (error) {
+      console.error("Nisy fahadisoana teo am-pamafana:", error);
+      showToast("Tsy afaka namafa ny tononkalo", "error");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: poem?.title || "Tononkalo",
+      text: poem?.excerpt || "",
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast("Voatahiry ny rohy ao amin'ny presse-papier", "success");
+      }
+    } catch (error) {
+      // L'utilisateur a annulé le partage — pas grave
+      if ((error as Error).name !== "AbortError") {
+        await navigator.clipboard.writeText(window.location.href);
+        showToast("Voatahiry ny rohy ao amin'ny presse-papier", "success");
+      }
     }
   };
 
@@ -120,8 +179,12 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
             </header>
           )}
 
-          <div className="mb-16 flex items-center justify-center gap-4 border-b border-outline-variant/20 pb-8">
-            <div className="relative h-12 w-12 overflow-hidden rounded-full border border-outline-variant bg-surface-container">
+          {/* Author Info — Cliquable */}
+          <Link 
+            href={`/profile/${poem.authorId}`} 
+            className="mb-16 flex items-center justify-center gap-4 border-b border-outline-variant/20 pb-8 transition-opacity hover:opacity-80 group/author"
+          >
+            <div className="relative h-12 w-12 overflow-hidden rounded-full border border-outline-variant bg-surface-container transition-colors group-hover/author:border-primary">
               {poem.authorImage ? (
                 <Image src={poem.authorImage} alt={poem.authorName} fill className="object-cover grayscale" />
               ) : (
@@ -131,7 +194,7 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
               )}
             </div>
             <div className="text-left">
-              <span className="block font-sans text-sm font-semibold uppercase tracking-widest text-primary">
+              <span className="block font-sans text-sm font-semibold uppercase tracking-widest text-primary group-hover/author:underline">
                 {poem.authorName}
               </span>
               <span className="block font-sans text-xs text-on-surface-variant/60">
@@ -146,7 +209,7 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
                 }
               </span>
             </div>
-          </div>
+          </Link>
 
           <div 
             className="ProseMirror text-center"
@@ -159,9 +222,11 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
                 <button 
                   onClick={handleLike}
                   disabled={isLiking || !user}
-                  className={`flex items-center gap-2 transition-colors hover:text-primary ${isLiking ? "opacity-50" : "text-on-surface-variant"}`}
+                  className={`flex items-center gap-2 transition-colors hover:text-primary ${
+                    liked ? "text-primary" : isLiking ? "opacity-50 text-on-surface-variant" : "text-on-surface-variant"
+                  }`}
                 >
-                  <span className="material-symbols-outlined text-[24px]">water_drop</span>
+                  <span className={`material-symbols-outlined text-[24px] ${liked ? "fill-1" : ""}`}>water_drop</span>
                   <span className="font-sans text-sm font-medium">{poem.likesCount}</span>
                 </button>
                 <button className="flex items-center gap-2 text-on-surface-variant transition-colors hover:text-primary">
@@ -170,6 +235,25 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
                 </button>
               </div>
               <div className="flex items-center gap-4">
+                {/* Actions de l'auteur */}
+                {isOwner && (
+                  <>
+                    <Link
+                      href={`/write?edit=${id}`}
+                      className="text-on-surface-variant transition-colors hover:text-primary"
+                      title="Hanova"
+                    >
+                      <span className="material-symbols-outlined text-[24px]">edit</span>
+                    </Link>
+                    <button 
+                      onClick={() => setShowDeleteModal(true)}
+                      className="text-on-surface-variant transition-colors hover:text-red-600"
+                      title="Hamafa"
+                    >
+                      <span className="material-symbols-outlined text-[24px]">delete</span>
+                    </button>
+                  </>
+                )}
                 <button 
                   onClick={handleBookmark}
                   disabled={!user}
@@ -180,7 +264,10 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
                     {bookmarked ? "bookmark" : "bookmark_border"}
                   </span>
                 </button>
-                <button className="text-on-surface-variant transition-colors hover:text-primary">
+                <button 
+                  onClick={handleShare}
+                  className="text-on-surface-variant transition-colors hover:text-primary"
+                >
                   <span className="material-symbols-outlined text-[24px]">ios_share</span>
                 </button>
               </div>
@@ -191,6 +278,19 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
         </article>
       </main>
       <Footer />
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Hamafa ity tononkalo ity?"
+        message="Tsy azo averina intsony ity tononkalo ity rehefa voafafa. Ny hafatra rehetra sy ny tiako rehetra dia ho very koa."
+        confirmLabel="Hamafa"
+        cancelLabel="Hanafoana"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteModal(false)}
+        isLoading={isDeleting}
+      />
     </>
   );
 }

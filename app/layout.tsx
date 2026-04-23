@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Newsreader, Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
@@ -34,7 +35,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col antialiased bg-background text-on-background">
         <AuthProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

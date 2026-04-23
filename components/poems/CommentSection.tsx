@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { addComment, getComments } from "@/lib/firebase/firestore";
 import { Comment } from "@/types";
@@ -108,7 +109,10 @@ export default function CommentSection({ poemId }: CommentSectionProps) {
         ) : comments.length > 0 ? (
           comments.map((comment) => (
             <div key={comment.id} className="flex gap-4">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-outline-variant/30 bg-surface-container">
+              <Link 
+                href={`/profile/${comment.authorId}`}
+                className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-outline-variant/30 bg-surface-container transition-colors hover:border-primary"
+              >
                 {comment.authorImage ? (
                   <Image src={comment.authorImage} alt={comment.authorName} fill className="object-cover grayscale" />
                 ) : (
@@ -116,10 +120,15 @@ export default function CommentSection({ poemId }: CommentSectionProps) {
                     account_circle
                   </span>
                 )}
-              </div>
+              </Link>
               <div className="flex flex-col gap-1">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-sans text-sm font-bold text-primary">{comment.authorName}</span>
+                  <Link 
+                    href={`/profile/${comment.authorId}`}
+                    className="font-sans text-sm font-bold text-primary transition-colors hover:underline"
+                  >
+                    {comment.authorName}
+                  </Link>
                   <span className="font-sans text-[10px] uppercase tracking-widest text-on-surface-variant/50">
                     {comment.createdAt && 
                       (() => {

@@ -83,6 +83,7 @@ export default function ArchivePage() {
                 id={poem.id}
                 title={poem.title}
                 author={poem.authorName}
+                authorId={poem.authorId}
                 excerpt={poem.excerpt}
                 moods={poem.moods}
                 likesCount={poem.likesCount}

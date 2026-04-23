@@ -5,20 +5,26 @@ interface PoemCardProps {
   id: string;
   title: string;
   author: string;
+  authorId: string;
   excerpt: string;
   moods: string[];
   likesCount: number;
   imageUrl?: string;
+  showDeleteButton?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 export default function PoemCard({
   id,
   title,
   author,
+  authorId,
   excerpt,
   moods,
   likesCount,
   imageUrl,
+  showDeleteButton = false,
+  onDelete,
 }: PoemCardProps) {
   return (
     <article className="group relative flex h-full flex-col overflow-hidden border border-outline-variant bg-surface-container-lowest transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)]">
@@ -52,17 +58,34 @@ export default function PoemCard({
 
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-4 flex items-start justify-between">
-          <Link href={`/poem/${id}`} className="flex flex-col gap-1">
-            <h2 className="font-serif text-2xl font-medium text-primary transition-colors group-hover:text-surface-tint">
-              {title}
-            </h2>
-            <p className="font-sans text-[11px] font-bold uppercase tracking-widest text-outline">
+          <div className="flex flex-col gap-1">
+            <Link href={`/poem/${id}`}>
+              <h2 className="font-serif text-2xl font-medium text-primary transition-colors group-hover:text-surface-tint">
+                {title}
+              </h2>
+            </Link>
+            <Link 
+              href={`/profile/${authorId}`} 
+              className="font-sans text-[11px] font-bold uppercase tracking-widest text-outline transition-colors hover:text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
               {author}
-            </p>
-          </Link>
-          <button className="text-outline transition-colors hover:text-primary">
-            <span className="material-symbols-outlined text-[20px]">bookmark</span>
-          </button>
+            </Link>
+          </div>
+          <div className="flex items-center gap-1">
+            {showDeleteButton && onDelete && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete(id); }}
+                className="text-outline transition-colors hover:text-red-600"
+                title="Hamafa"
+              >
+                <span className="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            )}
+            <button className="text-outline transition-colors hover:text-primary">
+              <span className="material-symbols-outlined text-[20px]">bookmark</span>
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 flex-1 font-serif text-lg leading-relaxed text-on-surface-variant/80 italic line-clamp-3">

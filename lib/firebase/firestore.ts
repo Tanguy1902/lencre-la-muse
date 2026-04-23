@@ -12,7 +12,8 @@ import {
   serverTimestamp,
   increment,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from "firebase/firestore";
 import { db } from "./config";
 import { Poem, User, Comment } from "@/types";
@@ -48,6 +49,31 @@ export const createPoem = async (poemData: Partial<Poem>) => {
     updatedAt: serverTimestamp(),
   });
   return docRef.id;
+};
+
+export const updatePoem = async (poemId: string, data: Partial<Poem>) => {
+  const poemRef = doc(db, "poems", poemId);
+  await updateDoc(poemRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const deletePoem = async (poemId: string) => {
+  const batch = writeBatch(db);
+
+  // Supprimer les sous-collections likes
+  const likesSnap = await getDocs(collection(db, "poems", poemId, "likes"));
+  likesSnap.docs.forEach((d) => batch.delete(d.ref));
+
+  // Supprimer les sous-collections comments
+  const commentsSnap = await getDocs(collection(db, "poems", poemId, "comments"));
+  commentsSnap.docs.forEach((d) => batch.delete(d.ref));
+
+  // Supprimer le poème lui-même
+  batch.delete(doc(db, "poems", poemId));
+
+  await batch.commit();
 };
 
 export const getPoem = async (poemId: string) => {
@@ -89,21 +115,35 @@ export const getPoems = async (filter?: { mood?: string; authorId?: string; stat
   return poems;
 };
 
-export const likePoem = async (poemId: string, userId: string) => {
+export const toggleLike = async (poemId: string, userId: string): Promise<boolean> => {
   const likeRef = doc(db, "poems", poemId, "likes", userId);
   const likeSnap = await getDoc(likeRef);
-  
-  if (likeSnap.exists()) return; // Déjà liké
-  
-  await setDoc(likeRef, {
-    userId,
-    createdAt: serverTimestamp(),
-  });
-  
   const poemRef = doc(db, "poems", poemId);
-  await updateDoc(poemRef, {
-    likesCount: increment(1)
-  });
+  
+  if (likeSnap.exists()) {
+    // Unlike
+    await deleteDoc(likeRef);
+    await updateDoc(poemRef, {
+      likesCount: increment(-1)
+    });
+    return false;
+  } else {
+    // Like
+    await setDoc(likeRef, {
+      userId,
+      createdAt: serverTimestamp(),
+    });
+    await updateDoc(poemRef, {
+      likesCount: increment(1)
+    });
+    return true;
+  }
+};
+
+export const isLiked = async (userId: string, poemId: string): Promise<boolean> => {
+  const likeRef = doc(db, "poems", poemId, "likes", userId);
+  const likeSnap = await getDoc(likeRef);
+  return likeSnap.exists();
 };
 
 // --- Comments ---

@@ -1,24 +1,78 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/layout/Header";
 import TipTapEditor from "@/components/editor/TipTapEditor";
 import Button from "@/components/ui/Button";
 import ImageUpload from "@/components/ui/ImageUpload";
-import { createPoem } from "@/lib/firebase/firestore";
+import { createPoem, getPoem, updatePoem } from "@/lib/firebase/firestore";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useToast } from "@/components/ui/Toast";
 import { analyzeMood } from "@/lib/utils/moodAnalyzer";
 
 export default function EditorPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <div className="flex min-h-[60vh] items-center justify-center font-serif text-xl italic text-on-surface-variant/60">
+          Mampiditra ny mpanoratra...
+        </div>
+      </>
+    }>
+      <EditorContent />
+    </Suspense>
+  );
+}
+
+function EditorContent() {
   const { user } = useAuth();
   const router = useRouter();
-  const [title, setTitle] = useState("Soraty eto ny lohateny...");
+  const searchParams = useSearchParams();
+  const { showToast } = useToast();
+  
+  const editId = searchParams.get("edit");
+  const isEditMode = !!editId;
+
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [isPublishing, setIsPublishing] = useState(false);
   const [moods, setMoods] = useState<string[]>([]);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [initialContent, setInitialContent] = useState("");
+
+  // Charger le poème en mode édition
+  useEffect(() => {
+    if (!editId || !user) return;
+    
+    const loadPoem = async () => {
+      setLoadingEdit(true);
+      try {
+        const poem = await getPoem(editId);
+        if (poem && poem.authorId === user.uid) {
+          setTitle(poem.title);
+          setContent(poem.content);
+          setInitialContent(poem.content);
+          setImageUrl(poem.imageUrl || "");
+          setMoods(poem.moods || []);
+          const text = poem.content.replace(/<[^>]*>/g, " ").trim();
+          setWordCount(text ? text.split(/\s+/).length : 0);
+        } else {
+          showToast("Tsy azonao ovaina ity tononkalo ity", "error");
+          router.push("/");
+        }
+      } catch (error) {
+        console.error("Nisy fahadisoana teo am-pampidirana ny tononkalo:", error);
+        showToast("Tsy afaka nampiditra ny tononkalo", "error");
+      } finally {
+        setLoadingEdit(false);
+      }
+    };
+    loadPoem();
+  }, [editId, user, router, showToast]);
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
@@ -34,29 +88,45 @@ export default function EditorPage() {
     if (!user || isPublishing) return;
     
     if (!title || !content) {
-      alert("Mba omeo lohateny sy votoatiny ny tononkalonao.");
+      showToast("Mba omeo lohateny sy votoatiny ny tononkalonao.", "error");
       return;
     }
 
     setIsPublishing(true);
     try {
       const excerpt = content.replace(/<[^>]*>/g, " ").substring(0, 150) + "...";
-      const poemId = await createPoem({
-        title,
-        content,
-        excerpt,
-        imageUrl,
-        authorId: user.uid,
-        authorName: user.displayName || "Mpanoratra tsy fantatra",
-        authorImage: user.photoURL || "",
-        moods: moods.length > 0 ? moods : ["Alahelo"],
-        status: "published",
-        visibility: "public",
-      });
-      router.push(`/poem/${poemId}`);
+      
+      if (isEditMode && editId) {
+        await updatePoem(editId, {
+          title,
+          content,
+          excerpt,
+          imageUrl,
+          moods: moods.length > 0 ? moods : ["Alahelo"],
+          status: "published",
+          visibility: "public",
+        });
+        showToast("Voaova ny tononkalo", "success");
+        router.push(`/poem/${editId}`);
+      } else {
+        const poemId = await createPoem({
+          title,
+          content,
+          excerpt,
+          imageUrl,
+          authorId: user.uid,
+          authorName: user.displayName || "Mpanoratra tsy fantatra",
+          authorImage: user.photoURL || "",
+          moods: moods.length > 0 ? moods : ["Alahelo"],
+          status: "published",
+          visibility: "public",
+        });
+        showToast("Voavoaka ny tononkalo!", "success");
+        router.push(`/poem/${poemId}`);
+      }
     } catch (error) {
       console.error("Nisy fahadisoana teo am-pamoahana azy:", error);
-      alert("Nisy fahadisoana teo am-pamoahana azy.");
+      showToast("Nisy fahadisoana teo am-pamoahana azy.", "error");
     } finally {
       setIsPublishing(false);
     }
@@ -67,31 +137,52 @@ export default function EditorPage() {
     setIsPublishing(true);
     try {
       const excerpt = content.replace(/<[^>]*>/g, " ").substring(0, 150) + "...";
-      await createPoem({
-        title,
-        content,
-        excerpt,
-        imageUrl,
-        authorId: user.uid,
-        authorName: user.displayName || "Mpanoratra tsy fantatra",
-        authorImage: user.photoURL || "",
-        moods: moods.length > 0 ? moods : ["Alahelo"],
-        status: "draft",
-        visibility: "private",
-      });
+      
+      if (isEditMode && editId) {
+        await updatePoem(editId, {
+          title,
+          content,
+          excerpt,
+          imageUrl,
+          moods: moods.length > 0 ? moods : ["Alahelo"],
+          status: "draft",
+          visibility: "private",
+        });
+        showToast("Voatahiry ny vakiraoka", "success");
+      } else {
+        await createPoem({
+          title,
+          content,
+          excerpt,
+          imageUrl,
+          authorId: user.uid,
+          authorName: user.displayName || "Mpanoratra tsy fantatra",
+          authorImage: user.photoURL || "",
+          moods: moods.length > 0 ? moods : ["Alahelo"],
+          status: "draft",
+          visibility: "private",
+        });
+        showToast("Voatahiry ny vakiraoka", "success");
+      }
       router.push(`/profile/${user.uid}`);
     } catch (error) {
       console.error("Nisy fahadisoana teo am-pitahirizana ny vakiraoka:", error);
+      showToast("Nisy fahadisoana teo am-pitahirizana", "error");
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const handlePreview = () => {
-    // Stocker temporairement dans le localStorage pour l'aperçu si nécessaire
-    // Ou simplement ouvrir un modal. Pour l'instant, on simule.
-    alert("Ho hita tsy ho ela ny fijerena mialoha!");
-  };
+  if (loadingEdit) {
+    return (
+      <>
+        <Header />
+        <div className="flex min-h-[60vh] items-center justify-center font-serif text-xl italic text-on-surface-variant/60">
+          Mampiditra ny tononkalo...
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -101,7 +192,9 @@ export default function EditorPage() {
         <div className="fixed top-16 z-40 flex w-full items-center justify-between border-b border-outline-variant bg-surface/80 px-4 py-2 backdrop-blur-md lg:hidden">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-secondary"></span>
-            <span className="font-sans text-[10px] uppercase tracking-wider text-on-surface-variant">Vakiraoka</span>
+            <span className="font-sans text-[10px] uppercase tracking-wider text-on-surface-variant">
+              {isEditMode ? "Fanovana" : "Vakiraoka"}
+            </span>
           </div>
           <div className="flex gap-2">
             <button 
@@ -116,7 +209,7 @@ export default function EditorPage() {
               disabled={isPublishing}
               className="rounded-full bg-primary px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-widest text-on-primary"
             >
-              {isPublishing ? "..." : "Avoahy"}
+              {isPublishing ? "..." : isEditMode ? "Hanova" : "Avoahy"}
             </button>
           </div>
         </div>
@@ -127,7 +220,9 @@ export default function EditorPage() {
             <p className="font-sans text-[10px] font-medium uppercase tracking-widest text-outline">Sata</p>
             <div className="flex items-center gap-2 text-on-surface-variant">
               <span className="h-2 w-2 rounded-full bg-secondary"></span>
-              <span className="font-sans text-sm">Voatahiry ny vakiraoka</span>
+              <span className="font-sans text-sm">
+                {isEditMode ? "Fanovana" : "Voatahiry ny vakiraoka"}
+              </span>
             </div>
             <span className="mt-1 font-sans text-[11px] text-outline-variant">Vao teo</span>
           </div>
@@ -153,7 +248,7 @@ export default function EditorPage() {
             disabled={isPublishing}
           >
             <span className="material-symbols-outlined text-[18px]">publish</span>
-            {isPublishing ? "Mampiditra..." : "Haparitaka"}
+            {isPublishing ? "Mampiditra..." : isEditMode ? "Hanova" : "Haparitaka"}
           </Button>
           <Button 
             variant="secondary" 
@@ -164,17 +259,28 @@ export default function EditorPage() {
             <span className="material-symbols-outlined text-[18px]">edit_note</span>
             Vakiraoka
           </Button>
-          <Button 
-            variant="secondary" 
-            className="flex items-center gap-2"
-            onClick={handlePreview}
-          >
-            Hijery
-          </Button>
+          {isEditMode && (
+            <Button 
+              variant="secondary" 
+              className="flex items-center gap-2"
+              onClick={() => router.push(`/poem/${editId}`)}
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+              Hanafoana
+            </Button>
+          )}
         </aside>
 
         {/* Zone de l'éditeur */}
         <div className="w-full max-w-reading-column mt-12 lg:mt-0">
+          {isEditMode && (
+            <div className="mb-6 flex items-center gap-2 rounded-lg border border-outline-variant/50 bg-surface-container-low px-4 py-3">
+              <span className="material-symbols-outlined text-[20px] text-primary">edit</span>
+              <span className="font-sans text-sm text-on-surface-variant">
+                Fanovana ny tononkalo efa misy
+              </span>
+            </div>
+          )}
           <div className="mb-8 md:mb-12">
             <div className="mb-6 md:mb-8">
               <ImageUpload value={imageUrl} onUpload={setImageUrl} />
@@ -189,7 +295,10 @@ export default function EditorPage() {
             <div className="mt-4 md:mt-6 h-px w-12 md:w-16 bg-outline-variant" />
           </div>
 
-          <TipTapEditor content={content} onChange={handleContentChange} />
+          <TipTapEditor 
+            content={isEditMode ? initialContent : content} 
+            onChange={handleContentChange} 
+          />
         </div>
 
         {/* Barre d'inspiration en bas */}
