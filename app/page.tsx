@@ -1,65 +1,143 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import PoemOfDay from "@/components/poems/PoemOfDay";
+import PoemCard from "@/components/poems/PoemCard";
+import MoodChip from "@/components/ui/MoodChip";
+import Button from "@/components/ui/Button";
+import { getPoems } from "@/lib/firebase/firestore";
+import { Poem } from "@/types";
 
 export default function Home() {
+  const [poems, setPoems] = useState<Poem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [poemOfDay, setPoemOfDay] = useState<Poem | null>(null);
+  const [activeMood, setActiveMood] = useState("Ny tononkalo rehetra");
+
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        const filter = activeMood !== "Ny tononkalo rehetra" ? { mood: activeMood } : {};
+        const allPoems = await getPoems({ ...filter, limit: 10 });
+        setPoems(allPoems);
+        if (allPoems.length > 0 && activeMood === "Ny tononkalo rehetra") {
+          setPoemOfDay(allPoems[0]);
+        }
+      } catch (error) {
+        console.error("Nisy fahadisoana teo am-pampidirana ny tononkalo:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllData();
+  }, [activeMood]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <>
+      <Header />
+      <main className="mx-auto w-full max-w-7xl px-8 py-12">
+        {poemOfDay && activeMood === "Ny tononkalo rehetra" ? (
+          <PoemOfDay 
+            id={poemOfDay.id}
+            title={poemOfDay.title}
+            author={poemOfDay.authorName}
+            authorImage={poemOfDay.authorImage || "https://lh3.googleusercontent.com/aida-public/AB6AXuDQr5MRfvBQd0jamm5wO6SPu81JuwWzwen6-ChnrqolIZl7kUAWp1IyVd3gli5ctjcmvyYnR_Pccl3cl36R_QUURVvWBNG1XAzmv0PY5IZc-zitqRfVhPmA5YMpecoXDnRxOGQeujPzeEvLzI6R-I5MrylTX95A3tgM5XvETLhvvGahIUkxeCGRYaRFrGhuZkoGpxYOVKuD3UqsJ6gvgVMEPVBsMNfVllhkl1EyqVNlJHNdns8gDBYWu-lQxH-8E_awyhfZCpMFUUI"}
+            excerpt={poemOfDay.excerpt}
+            imageUrl={poemOfDay.imageUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuDDK0wMJ7rDFWkPqZT0hYpIy3aUTKccQScMgA33wYPS06g35yzkrdIpP6CQG8GhaOirCA5Aw1niDO3VOk9jTmTPTPWLWGqw8P4UtbVn6HI8A2Vi9sAMP1aFOsfTwy3h6M1ppcYW_nZU3X7DgAs7lctkY_9rWxFmPOyeEeJVs32OdkK2jDaA1-iwBXdItZpG-aXdhlT-E8UlbIzjKtekvwE7k227HuRJJqwpRq79C-kGE_8VB7Fejua4tKKgFLhiK7vHThgg_UUzX1Q"}
+          />
+        ) : !loading && activeMood === "Ny tononkalo rehetra" && poems.length === 0 && (
+          <div className="mb-20 rounded-xl border border-outline-variant bg-surface-container-low p-12 text-center">
+            <h2 className="font-serif text-3xl italic text-primary">Foana ny toerana masina amin&apos;izao fotoana izao...</h2>
+            <p className="mt-4 font-sans text-on-surface-variant">Aoka ianao no ho voalohany hametraka penina eo amin&apos;ny taratasy.</p>
+          </div>
+        )}
+
+        {/* Section de filtrage */}
+        <section className="mb-16 flex flex-col items-start justify-between gap-8 border-b border-outline-variant pb-6 lg:flex-row lg:items-end">
+          <div className="w-full lg:w-1/3">
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] group-focus-within:text-primary transition-colors">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Hikaroka amin'ny alalan'ny fihetseham-po, teny na mpanoratra..."
+                className="w-full border-b border-outline-variant bg-transparent py-3 pl-8 pr-4 font-sans text-sm outline-none transition-all focus:border-primary placeholder:text-on-surface-variant/50"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <MoodChip 
+              label="Ny tononkalo rehetra" 
+              isActive={activeMood === "Ny tononkalo rehetra"} 
+              onClick={() => setActiveMood("Ny tononkalo rehetra")}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            <MoodChip 
+              label="Alahelo" 
+              isActive={activeMood === "Alahelo"} 
+              onClick={() => setActiveMood("Alahelo")}
+            />
+            <MoodChip 
+              label="Zava-boahary" 
+              isActive={activeMood === "Zava-boahary"} 
+              onClick={() => setActiveMood("Zava-boahary")}
+            />
+            <MoodChip 
+              label="Saintsainina" 
+              isActive={activeMood === "Saintsainina"} 
+              onClick={() => setActiveMood("Saintsainina")}
+            />
+            <Link 
+              href="/archive"
+              className="flex items-center gap-1 rounded-full border border-outline-variant px-5 py-2 font-sans text-[12px] font-medium uppercase tracking-wider transition-colors hover:bg-surface-container"
+            >
+              Hafa
+              <span className="material-symbols-outlined text-[16px]">tune</span>
+            </Link>
+          </div>
+        </section>
+
+        {loading ? (
+          <div className="py-20 text-center font-serif text-xl italic text-on-surface-variant/60">Mampiditra ny andininy...</div>
+        ) : poems.length > 0 ? (
+          /* Grille Masonry */
+          <section className="columns-1 gap-8 space-y-8 md:columns-2 lg:columns-3">
+            {poems.map((poem) => (
+              <PoemCard 
+                key={poem.id} 
+                id={poem.id}
+                title={poem.title}
+                author={poem.authorName}
+                excerpt={poem.excerpt}
+                moods={poem.moods}
+                likesCount={poem.likesCount}
+                imageUrl={poem.imageUrl}
+              />
+            ))}
+          </section>
+        ) : (
+          <div className="py-20 text-center font-serif text-xl italic text-on-surface-variant/40">Tsy misy tononkalo hita.</div>
+        )}
+
+        {poems.length > 0 && (
+          <div className="mt-16 flex justify-center">
+            <Link href="/archive">
+              <Button variant="secondary" className="group">
+                Hijery pejy hafa
+                <span className="material-symbols-outlined ml-2 text-[18px] transition-transform group-hover:translate-y-1">
+                  expand_more
+                </span>
+              </Button>
+            </Link>
+          </div>
+        )}
       </main>
-    </div>
+      <Footer />
+    </>
   );
 }

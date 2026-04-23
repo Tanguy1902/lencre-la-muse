@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Profils Utilisateurs
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Sous-collections Follow
+      match /followers/{followerId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == followerId;
+      }
+      match /following/{followedId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /bookmarks/{poemId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Poèmes
+    match /poems/{poemId} {
+      allow read: if !('status' in resource.data) || resource.data.status == 'published' || (request.auth != null && request.auth.uid == resource.data.authorId);
+      allow create: if request.auth != null;
+      
+      // L'auteur peut tout modifier
+      // Les autres peuvent incrémenter les compteurs (likes/comments)
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.authorId || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt']))
+      );
+      
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      
+      // Sous-collection Likes
+      match /likes/{userId} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Sous-collection Commentaires
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      }
+    }
+  }
+}

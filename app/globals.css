@@ -1,26 +1,118 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Colors - Editorial Minimalism */
+  --color-surface: #fcf9f8;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-bright: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae7e7;
+  --color-surface-container-highest: #e4e2e1;
+  --color-on-surface: #1b1c1c;
+  --color-on-surface-variant: #44474c;
+  --color-inverse-surface: #303030;
+  --color-inverse-on-surface: #f3f0f0;
+  --color-outline: #75777c;
+  --color-outline-variant: #c5c6cc;
+  --color-surface-tint: #545f6f;
+  
+  --color-primary: #05101d;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1a2533;
+  --color-on-primary-container: #818c9e;
+  --color-inverse-primary: #bcc7da;
+  
+  --color-secondary: #665e4c;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #ede1ca;
+  --color-on-secondary-container: #6c6451;
+  
+  --color-tertiary: #0f0f0b;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #242420;
+  --color-on-tertiary-container: #8d8b85;
+  
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  
+  --color-background: #fcf9f8;
+  --color-on-background: #1b1c1c;
+
+  /* Typography */
+  --font-serif: var(--font-newsreader);
+  --font-sans: var(--font-manrope);
+  
+  /* Spacing */
+  --spacing-unit: 8px;
+  --spacing-container-max: 1120px;
+  --spacing-reading-column: 680px;
+  --spacing-gutter: 24px;
+  --spacing-margin-page: 48px;
+
+  /* Border Radius */
+  --radius-sm: 0.125rem;
+  --radius-DEFAULT: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    @apply bg-background text-on-background font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .glass-panel {
+    background: rgba(252, 249, 248, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
+  .reading-container {
+    max-width: var(--spacing-reading-column);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  outline: none;
+  @apply font-serif text-xl leading-relaxed;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-outline-variant);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-container-highest);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline-variant);
 }
