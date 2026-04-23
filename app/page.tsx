@@ -39,7 +39,7 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main className="mx-auto w-full max-w-7xl px-8 py-12">
+      <main className="mx-auto w-full max-w-7xl px-4 md:px-8 py-8 md:py-12">
         {poemOfDay && activeMood === "Ny tononkalo rehetra" ? (
           <PoemOfDay 
             id={poemOfDay.id}
@@ -50,14 +50,14 @@ export default function Home() {
             imageUrl={poemOfDay.imageUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuDDK0wMJ7rDFWkPqZT0hYpIy3aUTKccQScMgA33wYPS06g35yzkrdIpP6CQG8GhaOirCA5Aw1niDO3VOk9jTmTPTPWLWGqw8P4UtbVn6HI8A2Vi9sAMP1aFOsfTwy3h6M1ppcYW_nZU3X7DgAs7lctkY_9rWxFmPOyeEeJVs32OdkK2jDaA1-iwBXdItZpG-aXdhlT-E8UlbIzjKtekvwE7k227HuRJJqwpRq79C-kGE_8VB7Fejua4tKKgFLhiK7vHThgg_UUzX1Q"}
           />
         ) : !loading && activeMood === "Ny tononkalo rehetra" && poems.length === 0 && (
-          <div className="mb-20 rounded-xl border border-outline-variant bg-surface-container-low p-12 text-center">
-            <h2 className="font-serif text-3xl italic text-primary">Foana ny toerana masina amin&apos;izao fotoana izao...</h2>
-            <p className="mt-4 font-sans text-on-surface-variant">Aoka ianao no ho voalohany hametraka penina eo amin&apos;ny taratasy.</p>
+          <div className="mb-12 md:mb-20 rounded-xl border border-outline-variant bg-surface-container-low p-6 md:p-12 text-center">
+            <h2 className="font-serif text-2xl md:text-3xl italic text-primary">Foana ny toerana masina amin&apos;izao fotoana izao...</h2>
+            <p className="mt-4 font-sans text-sm md:text-base text-on-surface-variant">Aoka ianao no ho voalohany hametraka penina eo amin&apos;ny taratasy.</p>
           </div>
         )}
 
         {/* Section de filtrage */}
-        <section className="mb-16 flex flex-col items-start justify-between gap-8 border-b border-outline-variant pb-6 lg:flex-row lg:items-end">
+        <section className="mb-10 md:mb-16 flex flex-col items-start justify-between gap-8 border-b border-outline-variant pb-6 lg:flex-row lg:items-end">
           <div className="w-full lg:w-1/3">
             <div className="relative group">
               <span className="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] group-focus-within:text-primary transition-colors">
@@ -65,40 +65,42 @@ export default function Home() {
               </span>
               <input
                 type="text"
-                placeholder="Hikaroka amin'ny alalan'ny fihetseham-po, teny na mpanoratra..."
+                placeholder="Hikaroka fihetseham-po, teny..."
                 className="w-full border-b border-outline-variant bg-transparent py-3 pl-8 pr-4 font-sans text-sm outline-none transition-all focus:border-primary placeholder:text-on-surface-variant/50"
               />
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <MoodChip 
-              label="Ny tononkalo rehetra" 
-              isActive={activeMood === "Ny tononkalo rehetra"} 
-              onClick={() => setActiveMood("Ny tononkalo rehetra")}
-            />
-            <MoodChip 
-              label="Alahelo" 
-              isActive={activeMood === "Alahelo"} 
-              onClick={() => setActiveMood("Alahelo")}
-            />
-            <MoodChip 
-              label="Zava-boahary" 
-              isActive={activeMood === "Zava-boahary"} 
-              onClick={() => setActiveMood("Zava-boahary")}
-            />
-            <MoodChip 
-              label="Saintsainina" 
-              isActive={activeMood === "Saintsainina"} 
-              onClick={() => setActiveMood("Saintsainina")}
-            />
-            <Link 
-              href="/archive"
-              className="flex items-center gap-1 rounded-full border border-outline-variant px-5 py-2 font-sans text-[12px] font-medium uppercase tracking-wider transition-colors hover:bg-surface-container"
-            >
-              Hafa
-              <span className="material-symbols-outlined text-[16px]">tune</span>
-            </Link>
+          <div className="flex w-full overflow-x-auto pb-2 scrollbar-hide lg:w-auto lg:overflow-visible lg:pb-0">
+            <div className="flex flex-nowrap gap-3 lg:flex-wrap">
+              <MoodChip 
+                label="Ny tononkalo rehetra" 
+                isActive={activeMood === "Ny tononkalo rehetra"} 
+                onClick={() => setActiveMood("Ny tononkalo rehetra")}
+              />
+              <MoodChip 
+                label="Alahelo" 
+                isActive={activeMood === "Alahelo"} 
+                onClick={() => setActiveMood("Alahelo")}
+              />
+              <MoodChip 
+                label="Zava-boahary" 
+                isActive={activeMood === "Zava-boahary"} 
+                onClick={() => setActiveMood("Zava-boahary")}
+              />
+              <MoodChip 
+                label="Saintsainina" 
+                isActive={activeMood === "Saintsainina"} 
+                onClick={() => setActiveMood("Saintsainina")}
+              />
+              <Link 
+                href="/archive"
+                className="flex shrink-0 items-center gap-1 rounded-full border border-outline-variant px-5 py-2 font-sans text-[12px] font-medium uppercase tracking-wider transition-colors hover:bg-surface-container"
+              >
+                Hafa
+                <span className="material-symbols-outlined text-[16px]">tune</span>
+              </Link>
+            </div>
           </div>
         </section>
 

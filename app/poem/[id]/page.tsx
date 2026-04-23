@@ -81,7 +81,7 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
       <main className="mx-auto flex w-full max-w-7xl flex-col items-center pb-margin-page">
         {/* Hero Section Immersive */}
         {poem.imageUrl && (
-          <section className="relative h-[50vh] w-full overflow-hidden md:h-[70vh]">
+          <section className="relative h-[40vh] w-full overflow-hidden md:h-[70vh]">
             <Image
               src={poem.imageUrl}
               alt={poem.title}
@@ -91,14 +91,14 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
             />
             <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/20 to-transparent" />
             
-            <div className="absolute bottom-0 left-0 w-full p-gutter md:p-12">
+            <div className="absolute bottom-0 left-0 w-full p-6 md:p-12">
               <div className="mx-auto max-w-reading-column text-center">
                 <div className="mb-4 flex items-center justify-center gap-2">
                   {poem.moods.map((mood) => (
                     <MoodChip key={mood} label={mood} className="bg-surface/80 backdrop-blur-sm" />
                   ))}
                 </div>
-                <h1 className="font-serif text-5xl font-medium tracking-tight text-primary md:text-7xl">
+                <h1 className="font-serif text-3xl font-medium tracking-tight text-primary md:text-7xl">
                   {poem.title}
                 </h1>
               </div>
@@ -106,15 +106,15 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
           </section>
         )}
 
-        <article className={`reading-container w-full px-gutter ${poem.imageUrl ? 'pt-12' : 'py-12'}`}>
+        <article className={`reading-container w-full px-4 md:px-gutter ${poem.imageUrl ? 'pt-8 md:pt-12' : 'py-8 md:py-12'}`}>
           {!poem.imageUrl && (
-            <header className="mb-16 text-center">
+            <header className="mb-10 md:mb-16 text-center">
               <div className="mb-4 flex items-center justify-center gap-2">
                 {poem.moods.map((mood) => (
                   <MoodChip key={mood} label={mood} className="scale-90" />
                 ))}
               </div>
-              <h1 className="mb-8 font-serif text-5xl font-medium tracking-tight text-primary md:text-6xl">
+              <h1 className="mb-6 md:mb-8 font-serif text-3xl font-medium tracking-tight text-primary md:text-6xl">
                 {poem.title}
               </h1>
             </header>

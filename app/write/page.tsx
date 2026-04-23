@@ -13,7 +13,7 @@ import { analyzeMood } from "@/lib/utils/moodAnalyzer";
 export default function EditorPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [title, setTitle] = useState("Lohatenynao eto...");
+  const [title, setTitle] = useState("Soraty eto ny lohateny...");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [wordCount, setWordCount] = useState(0);
@@ -96,8 +96,32 @@ export default function EditorPage() {
   return (
     <>
       <Header />
-      <main className="relative flex flex-col items-center px-6 pb-48 pt-24 lg:px-0">
-        {/* Actions à gauche */}
+      <main className="relative flex flex-col items-center px-4 pb-48 pt-16 md:pt-24 lg:px-0">
+        {/* Mobile Action Bar (Top) */}
+        <div className="fixed top-16 z-40 flex w-full items-center justify-between border-b border-outline-variant bg-surface/80 px-4 py-2 backdrop-blur-md lg:hidden">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-secondary"></span>
+            <span className="font-sans text-[10px] uppercase tracking-wider text-on-surface-variant">Vakiraoka</span>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleSaveDraft}
+              disabled={isPublishing}
+              className="rounded-full bg-surface-container px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-widest text-primary"
+            >
+              Tahiry
+            </button>
+            <button 
+              onClick={handlePublish}
+              disabled={isPublishing}
+              className="rounded-full bg-primary px-4 py-2 font-sans text-[10px] font-bold uppercase tracking-widest text-on-primary"
+            >
+              {isPublishing ? "..." : "Avoahy"}
+            </button>
+          </div>
+        </div>
+
+        {/* Actions à gauche (Desktop) */}
         <aside className="fixed left-12 top-1/3 z-40 hidden flex-col gap-6 lg:flex">
           <div className="flex flex-col gap-2">
             <p className="font-sans text-[10px] font-medium uppercase tracking-widest text-outline">Sata</p>
@@ -120,7 +144,7 @@ export default function EditorPage() {
           </div>
         </aside>
 
-        {/* Actions à droite */}
+        {/* Actions à droite (Desktop) */}
         <aside className="fixed right-12 top-1/3 z-40 hidden flex-col gap-4 lg:flex">
           <Button 
             variant="primary" 
@@ -150,9 +174,9 @@ export default function EditorPage() {
         </aside>
 
         {/* Zone de l'éditeur */}
-        <div className="w-full max-w-reading-column">
-          <div className="mb-12">
-            <div className="mb-8">
+        <div className="w-full max-w-reading-column mt-12 lg:mt-0">
+          <div className="mb-8 md:mb-12">
+            <div className="mb-6 md:mb-8">
               <ImageUpload value={imageUrl} onUpload={setImageUrl} />
             </div>
             <input
@@ -160,36 +184,36 @@ export default function EditorPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Lohateny..."
-              className="w-full bg-transparent p-0 font-serif text-5xl font-medium text-primary outline-none placeholder:text-outline-variant/30"
+              className="w-full bg-transparent p-0 font-serif text-3xl md:text-5xl font-medium text-primary outline-none placeholder:text-outline-variant/30"
             />
-            <div className="mt-6 h-px w-16 bg-outline-variant" />
+            <div className="mt-4 md:mt-6 h-px w-12 md:w-16 bg-outline-variant" />
           </div>
 
           <TipTapEditor content={content} onChange={handleContentChange} />
         </div>
 
         {/* Barre d'inspiration en bas */}
-        <div className="glass-panel fixed bottom-8 z-50 flex items-center gap-6 rounded-full border border-outline-variant px-6 py-3 shadow-lg">
-          <div className="flex items-center gap-3 border-r border-outline-variant pr-6">
-            <span className="font-sans text-[10px] font-medium uppercase tracking-widest text-outline">Fihetseham-po soso-kevitra</span>
-            <div className="flex gap-2">
+        <div className="glass-panel fixed bottom-6 md:bottom-8 z-50 flex max-w-[90vw] items-center gap-4 md:gap-6 rounded-full border border-outline-variant px-4 md:px-6 py-2 md:py-3 shadow-lg">
+          <div className="flex items-center gap-2 md:gap-3 border-r border-outline-variant pr-4 md:pr-6 overflow-hidden">
+            <span className="hidden md:block font-sans text-[10px] font-medium uppercase tracking-widest text-outline shrink-0">Fihetseham-po</span>
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
               {moods.length > 0 ? (
                 moods.map(mood => (
-                  <span key={mood} className="rounded-full border border-primary bg-primary/10 px-3 py-1 font-sans text-[10px] text-primary transition-colors">
+                  <span key={mood} className="shrink-0 rounded-full border border-primary bg-primary/10 px-2 md:px-3 py-1 font-sans text-[9px] md:text-[10px] text-primary">
                     {mood}
                   </span>
                 ))
               ) : (
-                <span className="rounded-full border border-outline-variant px-3 py-1 font-sans text-[10px] text-on-surface-variant/40 italic">
-                  Mihaino ny teny...
+                <span className="rounded-full border border-outline-variant px-3 py-1 font-sans text-[9px] md:text-[10px] text-on-surface-variant/40 italic whitespace-nowrap">
+                  Mihaino...
                 </span>
               )}
             </div>
           </div>
           
-          <div className="flex items-center gap-2 font-sans text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-[18px]">notes</span>
-            {wordCount} teny
+          <div className="flex items-center gap-1 md:gap-2 font-sans text-[12px] md:text-sm text-on-surface-variant shrink-0">
+            <span className="material-symbols-outlined text-[16px] md:text-[18px]">notes</span>
+            {wordCount}
           </div>
         </div>
       </main>
