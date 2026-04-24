@@ -1,5 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useToast } from "@/components/ui/Toast";
+import { toggleBookmark, isBookmarked as checkBookmark } from "@/lib/firebase/firestore";
 
 interface PoemCardProps {
   id: string;
@@ -26,6 +32,65 @@ export default function PoemCard({
   showDeleteButton = false,
   onDelete,
 }: PoemCardProps) {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const [bookmarked, setBookmarked] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkBookmark(user.uid, id).then(setBookmarked);
+    }
+  }, [id, user]);
+
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      showToast("Midira aloha mba hitahirizana ny tononkalo", "error");
+      return;
+    }
+    
+    setIsActionLoading(true);
+    try {
+      const status = await toggleBookmark(user.uid, id);
+      setBookmarked(status);
+      showToast(
+        status ? "Voatahiry ao amin'ny tahirinao" : "Voaesotra tao amin'ny tahirinao",
+        "success"
+      );
+    } catch (error) {
+      console.error("Fahadisoana teo am-pitahirizana:", error);
+      showToast("Nisy fahadisoana teo am-pitahirizana", "error");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const shareData = {
+      title,
+      text: excerpt,
+      url: `${window.location.origin}/poem/${id}`,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        showToast("Voatahiry ny rohy ao amin'ny presse-papier", "success");
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        await navigator.clipboard.writeText(shareData.url);
+        showToast("Voatahiry ny rohy ao amin'ny presse-papier", "success");
+      }
+    }
+  };
+
   return (
     <article className="group relative flex h-full flex-col overflow-hidden border border-outline-variant bg-surface-container-lowest transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)]">
       {/* Image Container */}
@@ -76,14 +141,21 @@ export default function PoemCard({
             {showDeleteButton && onDelete && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(id); }}
-                className="text-outline transition-colors hover:text-red-600"
+                className="text-outline transition-colors hover:text-red-600 p-2"
                 title="Hamafa"
               >
                 <span className="material-symbols-outlined text-[20px]">delete</span>
               </button>
             )}
-            <button className="text-outline transition-colors hover:text-primary">
-              <span className="material-symbols-outlined text-[20px]">bookmark</span>
+            <button 
+              onClick={handleBookmark}
+              disabled={isActionLoading}
+              className={`transition-colors p-2 ${bookmarked ? "text-primary" : "text-outline hover:text-primary"}`}
+              title={bookmarked ? "Esorina ao amin'ny tahiry" : "Hampidirina ao amin'ny tahiry"}
+            >
+              <span className={`material-symbols-outlined text-[20px] ${bookmarked ? "fill-1" : ""}`}>
+                {bookmarked ? "bookmark" : "bookmark_border"}
+              </span>
             </button>
           </div>
         </div>
@@ -104,7 +176,11 @@ export default function PoemCard({
               <span className="material-symbols-outlined text-[18px]">water_drop</span>
               <span className="font-sans text-[10px]">{likesCount}</span>
             </div>
-            <button className="transition-colors hover:text-primary">
+            <button 
+              onClick={handleShare}
+              className="transition-colors hover:text-primary p-2"
+              title="Hizara"
+            >
               <span className="material-symbols-outlined text-[18px]">ios_share</span>
             </button>
           </div>

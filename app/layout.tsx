@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Newsreader, Manrope } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 
 const newsreader = Newsreader({
@@ -16,8 +17,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Ranomainty sy Aingam-panahy | Sehatra ho an&apos;ny Tononkalo",
-  description: "Manorata, avoahy ary hikaroha tononkalo ao anatin&apos;ny traikefa tsotra sy maoderina.",
+  title: "Ranomainty sy Aingam-panahy | Sehatra ho an'ny Tononkalo",
+  description: "Manorata, avoahy ary hikaroha tononkalo ao anatin'ny traikefa tsotra sy maoderina.",
 };
 
 export default function RootLayout({
@@ -35,9 +36,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col antialiased bg-background text-on-background">
         <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

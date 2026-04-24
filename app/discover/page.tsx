@@ -8,8 +8,10 @@ import PoemOfDay from "@/components/poems/PoemOfDay";
 import PoemCard from "@/components/poems/PoemCard";
 import MoodChip from "@/components/ui/MoodChip";
 import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
 import { getPoems } from "@/lib/firebase/firestore";
 import { Poem } from "@/types";
+import PoemCardSkeleton from "@/components/poems/PoemCardSkeleton";
 
 export default function DiscoverPage() {
   const [poems, setPoems] = useState<Poem[]>([]);
@@ -49,7 +51,11 @@ export default function DiscoverPage() {
     <>
       <Header />
       <main className="mx-auto w-full max-w-7xl px-4 md:px-8 py-8 md:py-12">
-        {poemOfDay && activeMood === "Ny tononkalo rehetra" && !searchTerm ? (
+        {loading ? (
+          <div className="mb-12 md:mb-20">
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+          </div>
+        ) : poemOfDay && activeMood === "Ny tononkalo rehetra" && !searchTerm ? (
           <PoemOfDay 
             id={poemOfDay.id}
             title={poemOfDay.title}
@@ -116,7 +122,9 @@ export default function DiscoverPage() {
         </section>
 
         {loading ? (
-          <div className="py-20 text-center font-serif text-xl italic text-on-surface-variant/60">Mampiditra ny andininy...</div>
+          <section className="columns-1 gap-8 space-y-8 md:columns-2 lg:columns-3">
+             {[1, 2, 3, 4, 5, 6].map((i) => <PoemCardSkeleton key={i} />)}
+          </section>
         ) : poems.length > 0 ? (
           /* Grille Masonry */
           <section className="columns-1 gap-8 space-y-8 md:columns-2 lg:columns-3">

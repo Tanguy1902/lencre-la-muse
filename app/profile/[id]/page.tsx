@@ -188,7 +188,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             <div className="flex flex-col items-center justify-center rounded border border-outline-variant/50 bg-surface-container-low p-4 text-center">
               <span className="font-serif text-3xl font-medium text-primary">{stats.followerCount}</span>
               <span className="font-sans text-[10px] font-medium uppercase tracking-widest text-on-surface-variant mt-1">
-                Mpamakia
+                Mpanaraka
               </span>
             </div>
           </div>

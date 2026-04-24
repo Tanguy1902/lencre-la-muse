@@ -8,9 +8,11 @@ import Footer from "@/components/layout/Footer";
 import Button from "@/components/ui/Button";
 import { getPoems } from "@/lib/firebase/firestore";
 import { Poem } from "@/types";
+import PoemCardSkeleton from "@/components/poems/PoemCardSkeleton";
 
 export default function LandingPage() {
   const [recentPoems, setRecentPoems] = useState<Poem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRecent = async () => {
@@ -19,6 +21,8 @@ export default function LandingPage() {
         setRecentPoems(data);
       } catch (error) {
         console.error("Fahadisoana teo am-pampidirana ny tononkalo farany:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchRecent();
@@ -128,12 +132,14 @@ export default function LandingPage() {
             </header>
             
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              {recentPoems.length > 0 ? (
+              {loading ? (
+                [1, 2, 3].map((i) => <PoemCardSkeleton key={i} />)
+              ) : recentPoems.length > 0 ? (
                 recentPoems.map((poem) => (
                   <Link 
                     key={poem.id}
                     href={`/poem/${poem.id}`}
-                    className="group flex h-full flex-col bg-white p-8 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl"
+                    className="group flex h-full flex-col border border-outline-variant bg-surface-container-lowest p-8 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl"
                   >
                     <h3 className="mb-4 font-serif text-2xl text-primary transition-colors group-hover:text-surface-tint">
                       {poem.title}
@@ -148,9 +154,9 @@ export default function LandingPage() {
                   </Link>
                 ))
               ) : (
-                [1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse bg-surface-container h-64 rounded-lg"></div>
-                ))
+                <div className="col-span-3 text-center font-serif text-xl italic text-on-surface-variant/60">
+                  Tsy misy tononkalo hita.
+                </div>
               )}
             </div>
           </div>
