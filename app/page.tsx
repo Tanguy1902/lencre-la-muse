@@ -45,7 +45,7 @@ export default function LandingPage() {
               Toerana iainan&apos;ny teny.
             </h1>
             <p className="mx-auto mb-10 max-w-2xl font-serif text-xl italic leading-relaxed text-on-surface-variant/80 md:text-2xl">
-              Toerana masina ara-dijitaly natokana ho an&apos;ny tononkalo. Manorata malalaka, vakio amim-panajana, ary miaraha amin&apos;ny fianakaviambe manome lanja ny kanton&apos;ny rima sy ny voambolana.
+              Tranokala natokana ho an&apos;ny tononkalo. Manorata malalaka ampiano ny ainga, vakio amim-panajana, ary miaraha amin&apos;ny fianakaviambe manome lanja ny kanton&apos;ny rima sy ny voambolana.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/auth/register">
@@ -81,9 +81,9 @@ export default function LandingPage() {
               <span className="material-symbols-outlined text-primary">auto_stories</span>
               <span className="font-sans text-xs font-bold uppercase tracking-widest text-on-surface-variant">Fikarohana</span>
             </div>
-            <h2 className="font-serif text-4xl font-medium text-primary md:text-5xl">Galerian&apos;ny Kanto Literatiora</h2>
+            <h2 className="font-serif text-4xl font-medium text-primary md:text-5xl">Tahiry kanton&apos;ny Literatiora</h2>
             <p className="font-serif text-xl leading-relaxed text-on-surface-variant/70">
-              Zahao ireo sanganasa tahaka ny fitsidihana fampirantiana. Ny tononkalo tsirairay dia omena lanja manokana, miaraka amin&apos;ny soratra kanto sy endrika madio.
+              Hitanao ato ireo sangan&apos;asa, vokatry ny ainga ka nosoratan&apos;ny penin&apos;ireo mpanoratra. Mankafiza finaritra ny kanton&apos;ny Teny.
             </p>
             <Link href="/discover" className="group flex items-center gap-2 font-sans text-sm font-bold uppercase tracking-widest text-primary">
               Hijery ny sanganasa
@@ -99,9 +99,9 @@ export default function LandingPage() {
               <span className="material-symbols-outlined text-primary">edit_note</span>
               <span className="font-sans text-xs font-bold uppercase tracking-widest text-on-surface-variant">Famoronana</span>
             </div>
-            <h2 className="font-serif text-4xl font-medium text-primary md:text-5xl">Ny Toerana Masina Hanoratana</h2>
+            <h2 className="font-serif text-4xl font-medium text-primary md:text-5xl">Asehoy ny ainga ao anatinao</h2>
             <p className="font-serif text-xl leading-relaxed text-on-surface-variant/70">
-              Endrika tsotra sy madio tanteraka. Ny sary sy ny loko dia manome vahana ny pejy fotsy. Mifantoha amin&apos;ny rima sy ny dikany. Ny soratanao no zava-dehibe indrindra.
+              Ianao no sisa andrasana fa ny penina efa vonona. Efa vonona hamoaka izay fihetseham-po vokatry ainga ao anatinao. Ka tonio ny fo dia andeha manorata.
             </p>
             <Link href="/write" className="group flex items-center gap-2 font-sans text-sm font-bold uppercase tracking-widest text-primary">
               Handray ny penina
@@ -124,7 +124,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl px-4 md:px-8">
             <header className="mb-16 text-center">
               <h2 className="mb-4 font-serif text-4xl font-medium text-primary md:text-5xl">Sanganasa vao nivoaka</h2>
-              <p className="font-serif text-xl italic text-on-surface-variant/60">Ireo bitsika vao voangona tao amin&apos;ny galerianay.</p>
+              <p className="font-serif text-xl italic text-on-surface-variant/60">Ireo bitsika vao voangona tao amin&apos;ny tahirinay.</p>
             </header>
             
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -160,7 +160,7 @@ export default function LandingPage() {
         <section className="mx-auto max-w-4xl px-4 py-32 text-center">
           <span className="material-symbols-outlined mb-8 text-5xl text-outline-variant/40">format_quote</span>
           <blockquote className="mb-12 font-serif text-3xl font-light italic leading-snug text-primary md:text-5xl">
-            &quot;Ao anatin&apos;izao tontolo izao be tabataba izao, ny tononkalo dia mila fahanginana ara-tsary. Namboarinay ity toerana ity mba hanomezan&apos;ny endrika lanja ny votoatiny.&quot;
+            &quot;Ampiakaro ny aingam-panahy ka avadiho ho soratra. Ampiasao ny penina ary ampanjakao ny Teny &quot;
           </blockquote>
           <div className="mx-auto h-px w-24 bg-outline-variant/30 mb-8" />
           <p className="font-sans text-[12px] font-bold uppercase tracking-widest text-on-surface-variant/60">Ny Fanambarana</p>
@@ -173,7 +173,7 @@ export default function LandingPage() {
             <div className="relative z-10 flex flex-col items-center gap-8">
               <h2 className="font-serif text-4xl font-medium md:text-6xl">Vonona handray ny penina ve ianao?</h2>
               <p className="max-w-xl font-serif text-xl italic text-on-primary-container/80">
-                Miaraha amin&apos;ny fianakaviamben&apos;ny mpanoratra manome lanja ny kanton&apos;ny teny. Maimaim-poana ny fisoratana anarana, ary ny fahanginana dia efa ao anatiny.
+                Miaraha amin&apos;ny fianakaviamben&apos;ny mpanoratra manome lanja ny kanton&apos;ny teny. Maimaim-poana ny fisoratana anarana.
               </p>
               <Link href="/auth/register">
                 <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 border-none px-12 py-6 text-lg">

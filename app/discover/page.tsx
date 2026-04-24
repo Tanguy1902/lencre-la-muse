@@ -60,7 +60,7 @@ export default function DiscoverPage() {
           />
         ) : !loading && activeMood === "Ny tononkalo rehetra" && !searchTerm && poems.length === 0 && (
           <div className="mb-12 md:mb-20 rounded-xl border border-outline-variant bg-surface-container-low p-6 md:p-12 text-center">
-            <h2 className="font-serif text-2xl md:text-3xl italic text-primary">Foana ny toerana masina amin&apos;izao fotoana izao...</h2>
+            <h2 className="font-serif text-2xl md:text-3xl italic text-primary">Mbola tsy misy tononkalo aloha hatreto</h2>
             <p className="mt-4 font-sans text-sm md:text-base text-on-surface-variant">Aoka ianao no ho voalohany hametraka penina eo amin&apos;ny taratasy.</p>
           </div>
         )}

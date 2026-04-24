@@ -24,7 +24,7 @@ export default function RegisterPage() {
           Ranomainty sy Aingam-panahy
         </Link>
         
-        <h1 className="mb-4 font-serif text-2xl font-medium text-primary">Hiditra ao amin&apos;ny toerana masina</h1>
+        <h1 className="mb-4 font-serif text-2xl font-medium text-primary">Hiditra</h1>
         <p className="mb-10 font-sans text-sm text-on-surface-variant">
           Manokatra kaonty mba hanombohana ny dianao amin&apos;ny tontolon&apos;ny tononkalo.
         </p>
@@ -45,7 +45,7 @@ export default function RegisterPage() {
               <div className="w-full border-t border-outline-variant"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-surface-container-lowest px-2 text-on-surface-variant">Na hisoratra anarana amin&apos;ny imailaka</span>
+              <span className="bg-surface-container-lowest px-2 text-on-surface-variant">Na hisoratra anarana amin&apos;ny mailaka</span>
             </div>
           </div>
 

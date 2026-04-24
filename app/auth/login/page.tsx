@@ -72,7 +72,7 @@ export default function LoginPage() {
           <p className="mt-8 font-sans text-xs text-on-surface-variant">
             Mbola tsy manana kaonty ?{" "}
             <Link href="/auth/register" className="font-semibold text-primary hover:underline">
-              Hisoratra anarana izao
+              Hisoratra anarana
             </Link>
           </p>
         </div>
