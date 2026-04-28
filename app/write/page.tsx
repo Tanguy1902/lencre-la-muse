@@ -10,6 +10,8 @@ import { createPoem, getPoem, updatePoem } from "@/lib/firebase/firestore";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useToast } from "@/components/ui/Toast";
 import { analyzeMood } from "@/lib/utils/moodAnalyzer";
+import { validatePoem, LIMITS } from "@/lib/utils/validation";
+import Link from "next/link";
 
 export default function EditorPage() {
   return (
@@ -27,7 +29,7 @@ export default function EditorPage() {
 }
 
 function EditorContent() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -43,6 +45,14 @@ function EditorContent() {
   const [moods, setMoods] = useState<string[]>([]);
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [initialContent, setInitialContent] = useState("");
+
+  // Route protection: redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      showToast("Midira aloha mba hanoratana tononkalo", "error");
+      router.push("/auth/login");
+    }
+  }, [authLoading, user, router, showToast]);
 
   // Charger le poème en mode édition
   useEffect(() => {
@@ -87,8 +97,10 @@ function EditorContent() {
   const handlePublish = async () => {
     if (!user || isPublishing) return;
     
-    if (!title || !content) {
-      showToast("Mba omeo lohateny sy votoatiny ny tononkalonao.", "error");
+    // Validation
+    const errors = validatePoem(title, content);
+    if (errors.length > 0) {
+      showToast(errors[0].message, "error");
       return;
     }
 
@@ -173,6 +185,36 @@ function EditorContent() {
     }
   };
 
+  // Don't render until auth is resolved
+  if (authLoading) {
+    return (
+      <>
+        <Header />
+        <div className="flex min-h-[60vh] items-center justify-center font-serif text-xl italic text-on-surface-variant/60">
+          Mampiditra ny mpanoratra...
+        </div>
+      </>
+    );
+  }
+
+  // Redirect handled by useEffect, but show nothing if not logged in
+  if (!user) {
+    return (
+      <>
+        <Header />
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
+          <span className="material-symbols-outlined text-6xl text-outline-variant/30">lock</span>
+          <p className="font-serif text-xl italic text-on-surface-variant/60">
+            Mila miditra aloha ianao vao afaka manorata.
+          </p>
+          <Link href="/auth/login">
+            <Button variant="primary">Hiditra</Button>
+          </Link>
+        </div>
+      </>
+    );
+  }
+
   if (loadingEdit) {
     return (
       <>
@@ -183,6 +225,9 @@ function EditorContent() {
       </>
     );
   }
+
+  // Character count color for title
+  const titleCharClass = title.length > LIMITS.TITLE_MAX ? "char-count-error" : title.length > LIMITS.TITLE_MAX * 0.9 ? "char-count-warn" : "char-count-ok";
 
   return (
     <>
@@ -285,13 +330,21 @@ function EditorContent() {
             <div className="mb-6 md:mb-8">
               <ImageUpload value={imageUrl} onUpload={setImageUrl} />
             </div>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Lohateny..."
-              className="w-full bg-transparent p-0 font-serif text-3xl md:text-5xl font-medium text-primary outline-none placeholder:text-outline-variant/30"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Lohateny..."
+                maxLength={LIMITS.TITLE_MAX + 10}
+                className="w-full bg-transparent p-0 font-serif text-3xl md:text-5xl font-medium text-primary outline-none placeholder:text-outline-variant/30"
+              />
+              {title.length > LIMITS.TITLE_MAX * 0.8 && (
+                <span className={`absolute right-0 top-1/2 -translate-y-1/2 font-sans text-[10px] ${titleCharClass}`}>
+                  {title.length}/{LIMITS.TITLE_MAX}
+                </span>
+              )}
+            </div>
             <div className="mt-4 md:mt-6 h-px w-12 md:w-16 bg-outline-variant" />
           </div>
 

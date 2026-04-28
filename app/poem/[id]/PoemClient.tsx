@@ -8,10 +8,13 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import MoodChip from "@/components/ui/MoodChip";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { getPoem, toggleLike, isLiked, toggleBookmark, isBookmarked, deletePoem } from "@/lib/firebase/firestore";
+import Skeleton from "@/components/ui/Skeleton";
+import { getPoem, deletePoem } from "@/lib/firebase/firestore";
 import { Poem } from "@/types";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useToast } from "@/components/ui/Toast";
+import { usePoemActions } from "@/hooks/usePoemActions";
+import { sanitizeHTML } from "@/lib/utils/sanitize";
 import CommentSection from "@/components/poems/CommentSection";
 
 export default function PoemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,11 +24,10 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
   const { showToast } = useToast();
   const [poem, setPoem] = useState<Poem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLiking, setIsLiking] = useState(false);
-  const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { liked, bookmarked, isLiking, handleLike, handleBookmark, handleShare } = usePoemActions(id);
 
   const isOwner = user?.uid === poem?.authorId;
 
@@ -34,14 +36,6 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
       try {
         const data = await getPoem(id);
         setPoem(data);
-        if (user) {
-          const [bookmarkedStatus, likedStatus] = await Promise.all([
-            isBookmarked(user.uid, id),
-            isLiked(user.uid, id),
-          ]);
-          setBookmarked(bookmarkedStatus);
-          setLiked(likedStatus);
-        }
       } catch (error) {
         console.error("Nisy fahadisoana teo am-pampidirana ny tononkalo:", error);
       } finally {
@@ -49,34 +43,12 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
       }
     };
     fetchPoem();
-  }, [id, user]);
+  }, [id]);
 
-  const handleLike = async () => {
-    if (!user || !poem || isLiking) return;
-    setIsLiking(true);
-    try {
-      const nowLiked = await toggleLike(id, user.uid);
-      setLiked(nowLiked);
-      setPoem({ ...poem, likesCount: poem.likesCount + (nowLiked ? 1 : -1) });
-    } catch (error) {
-      console.error("Nisy fahadisoana teo am-pitiavana:", error);
-    } finally {
-      setIsLiking(false);
-    }
-  };
-
-  const handleBookmark = async () => {
-    if (!user || !poem) return;
-    try {
-      const status = await toggleBookmark(user.uid, id);
-      setBookmarked(status);
-      showToast(
-        status ? "Voatahiry ao amin'ny tahirinao" : "Voaesotra tao amin'ny tahirinao",
-        "success"
-      );
-    } catch (error) {
-      console.error("Nisy fahadisoana teo am-pitahirizana:", error);
-    }
+  const onLike = async () => {
+    if (!poem) return;
+    await handleLike();
+    setPoem(prev => prev ? { ...prev, likesCount: prev.likesCount + (liked ? -1 : 1) } : prev);
   };
 
   const handleDelete = async () => {
@@ -95,44 +67,65 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
     }
   };
 
-  const handleShare = async () => {
-    const shareData = {
-      title: poem?.title || "Tononkalo",
-      text: poem?.excerpt || "",
-      url: window.location.href,
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        showToast("Voatahiry ny rohy ao amin'ny presse-papier", "success");
-      }
-    } catch (error) {
-      // L'utilisateur a annulé le partage — pas grave
-      if ((error as Error).name !== "AbortError") {
-        await navigator.clipboard.writeText(window.location.href);
-        showToast("Voatahiry ny rohy ao amin'ny presse-papier", "success");
-      }
-    }
+  const onShare = async () => {
+    if (!poem) return;
+    await handleShare(poem.title, poem.excerpt, window.location.href);
   };
 
+  // Loading skeleton
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface font-serif text-xl italic">
-        Mampiditra ny andininy...
-      </div>
+      <>
+        <Header />
+        <main className="mx-auto flex w-full max-w-7xl flex-col items-center pb-margin-page">
+          <div className="w-full">
+            <Skeleton className="h-[50vh] w-full" />
+          </div>
+          <div className="reading-container w-full px-4 md:px-gutter pt-8">
+            <div className="mb-16 flex flex-col items-center gap-4">
+              <Skeleton className="h-4 w-32 rounded" />
+              <Skeleton className="h-12 w-3/4 rounded" />
+            </div>
+            <div className="flex items-center justify-center gap-4 mb-16">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-32 rounded" />
+                <Skeleton className="h-3 w-24 rounded" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-6 w-full rounded" />
+              <Skeleton className="h-6 w-5/6 rounded" />
+              <Skeleton className="h-6 w-4/5 rounded" />
+              <Skeleton className="h-6 w-full rounded" />
+              <Skeleton className="h-6 w-3/4 rounded" />
+            </div>
+          </div>
+        </main>
+      </>
     );
   }
 
   if (!poem) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface font-serif text-xl italic">
-        Tahaka ny nanjavona tany anaty akon&apos;ny lasa ity tononkalo ity.
-      </div>
+      <>
+        <Header />
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 bg-surface text-center px-4">
+          <span className="material-symbols-outlined text-6xl text-outline-variant/30">ink_eraser</span>
+          <p className="font-serif text-xl italic text-on-surface-variant/60">
+            Tahaka ny nanjavona tany anaty akon&apos;ny lasa ity tononkalo ity.
+          </p>
+          <Link href="/discover" className="font-sans text-sm text-primary hover:underline">
+            Hiverina any amin&apos;ny fikarohana
+          </Link>
+        </div>
+        <Footer />
+      </>
     );
   }
+
+  // Sanitize poem content before rendering
+  const safeContent = sanitizeHTML(poem.content);
 
   return (
     <>
@@ -211,16 +204,17 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
             </div>
           </Link>
 
+          {/* Sanitized poem content */}
           <div 
             className="ProseMirror text-center"
-            dangerouslySetInnerHTML={{ __html: poem.content }}
+            dangerouslySetInnerHTML={{ __html: safeContent }}
           />
 
           <footer className="mt-20 border-t border-outline-variant/30 pt-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <button 
-                  onClick={handleLike}
+                  onClick={onLike}
                   disabled={isLiking || !user}
                   className={`flex items-center gap-2 transition-colors hover:text-primary ${
                     liked ? "text-primary" : isLiking ? "opacity-50 text-on-surface-variant" : "text-on-surface-variant"
@@ -265,7 +259,7 @@ export default function PoemPage({ params }: { params: Promise<{ id: string }> }
                   </span>
                 </button>
                 <button 
-                  onClick={handleShare}
+                  onClick={onShare}
                   className="text-on-surface-variant transition-colors hover:text-primary"
                 >
                   <span className="material-symbols-outlined text-[24px]">ios_share</span>

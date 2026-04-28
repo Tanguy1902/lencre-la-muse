@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -9,65 +9,69 @@ import PoemCard from "@/components/poems/PoemCard";
 import MoodChip from "@/components/ui/MoodChip";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
-import { getPoems } from "@/lib/firebase/firestore";
+import { getPoemOfDay } from "@/lib/firebase/firestore";
 import { Poem } from "@/types";
 import PoemCardSkeleton from "@/components/poems/PoemCardSkeleton";
+import { usePoems } from "@/hooks/usePoems";
+import { useBookmarks } from "@/hooks/useBookmarks";
 
 export default function DiscoverPage() {
-  const [poems, setPoems] = useState<Poem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [poemOfDay, setPoemOfDay] = useState<Poem | null>(null);
+  const [loadingPOD, setLoadingPOD] = useState(true);
   const [activeMood, setActiveMood] = useState("Ny tononkalo rehetra");
   const [searchTerm, setSearchTerm] = useState("");
 
+  const { poems, loading, loadingMore, hasMore, loadMore } = usePoems({
+    mood: activeMood !== "Ny tononkalo rehetra" ? activeMood : undefined,
+    search: searchTerm || undefined,
+    limit: 9,
+  });
+
+  // Batch bookmark check for all visible poems
+  const poemIds = useMemo(() => poems.map(p => p.id), [poems]);
+  const { isBookmarked, toggle: toggleBookmark } = useBookmarks(poemIds);
+
   useEffect(() => {
-    const fetchAllData = async () => {
-      setLoading(true);
+    const fetchPOD = async () => {
       try {
-        const filter: { mood?: string; search?: string } = activeMood !== "Ny tononkalo rehetra" ? { mood: activeMood } : {};
-        if (searchTerm) filter.search = searchTerm;
-        const allPoems = await getPoems({ ...filter, limit: 10 });
-        setPoems(allPoems);
-        if (allPoems.length > 0 && activeMood === "Ny tononkalo rehetra" && !searchTerm) {
-          setPoemOfDay(allPoems[0]);
-        } else {
-          setPoemOfDay(null);
-        }
+        const pod = await getPoemOfDay();
+        setPoemOfDay(pod);
       } catch (error) {
-        console.error("Nisy fahadisoana teo am-pampidirana ny tononkalo:", error);
+        console.error("Nisy fahadisoana teo am-pampidirana ny tononkalo anio:", error);
       } finally {
-        setLoading(false);
+        setLoadingPOD(false);
       }
     };
+    fetchPOD();
+  }, []);
 
-    const timer = setTimeout(() => {
-      fetchAllData();
-    }, searchTerm ? 400 : 0);
-
-    return () => clearTimeout(timer);
-  }, [activeMood, searchTerm]);
+  const showPOD = activeMood === "Ny tononkalo rehetra" && !searchTerm;
 
   return (
     <>
       <Header />
       <main className="mx-auto w-full max-w-7xl px-4 md:px-8 py-8 md:py-12">
-        {loading ? (
+        {loadingPOD && showPOD ? (
           <div className="mb-12 md:mb-20">
             <Skeleton className="h-[400px] w-full rounded-xl" />
           </div>
-        ) : poemOfDay && activeMood === "Ny tononkalo rehetra" && !searchTerm ? (
+        ) : poemOfDay && showPOD ? (
           <PoemOfDay 
             id={poemOfDay.id}
             title={poemOfDay.title}
             author={poemOfDay.authorName}
-            authorImage={poemOfDay.authorImage || "https://lh3.googleusercontent.com/aida-public/AB6AXuDQr5MRfvBQd0jamm5wO6SPu81JuwWzwen6-ChnrqolIZl7kUAWp1IyVd3gli5ctjcmvyYnR_Pccl3cl36R_QUURVvWBNG1XAzmv0PY5IZc-zitqRfVhPmA5YMpecoXDnRxOGQeujPzeEvLzI6R-I5MrylTX95A3tgM5XvETLhvvGahIUkxeCGRYaRFrGhuZkoGpxYOVKuD3UqsJ6gvgVMEPVBsMNfVllhkl1EyqVNlJHNdns8gDBYWu-lQxH-8E_awyhfZCpMFUUI"}
+            authorImage={poemOfDay.authorImage || ""}
             excerpt={poemOfDay.excerpt}
-            imageUrl={poemOfDay.imageUrl || "https://lh3.googleusercontent.com/aida-public/AB6AXuDDK0wMJ7rDFWkPqZT0hYpIy3aUTKccQScMgA33wYPS06g35yzkrdIpP6CQG8GhaOirCA5Aw1niDO3VOk9jTmTPTPWLWGqw8P4UtbVn6HI8A2Vi9sAMP1aFOsfTwy3h6M1ppcYW_nZU3X7DgAs7lctkY_9rWxFmPOyeEeJVs32OdkK2jDaA1-iwBXdItZpG-aXdhlT-E8UlbIzjKtekvwE7k227HuRJJqwpRq79C-kGE_8VB7Fejua4tKKgFLhiK7vHThgg_UUzX1Q"}
+            imageUrl={poemOfDay.imageUrl || ""}
           />
-        ) : !loading && activeMood === "Ny tononkalo rehetra" && !searchTerm && poems.length === 0 && (
+        ) : !loadingPOD && showPOD && poems.length === 0 && (
           <div className="mb-12 md:mb-20 rounded-xl border border-outline-variant bg-surface-container-low p-6 md:p-12 text-center">
+            <span className="material-symbols-outlined mb-4 text-5xl text-outline-variant/30">ink_pen</span>
             <h2 className="font-serif text-2xl md:text-3xl italic text-primary">Mbola tsy misy tononkalo aloha hatreto</h2>
             <p className="mt-4 font-sans text-sm md:text-base text-on-surface-variant">Aoka ianao no ho voalohany hametraka penina eo amin&apos;ny taratasy.</p>
+            <Link href="/write" className="mt-6 inline-block">
+              <Button variant="primary">Hanorata ny voalohany</Button>
+            </Link>
           </div>
         )}
 
@@ -139,23 +143,55 @@ export default function DiscoverPage() {
                 moods={poem.moods}
                 likesCount={poem.likesCount}
                 imageUrl={poem.imageUrl}
+                isBookmarked={isBookmarked(poem.id)}
+                onToggleBookmark={toggleBookmark}
               />
             ))}
           </section>
         ) : (
-          <div className="py-20 text-center font-serif text-xl italic text-on-surface-variant/40">Tsy misy tononkalo hita.</div>
+          <div className="flex flex-col items-center gap-6 py-20 text-center">
+            <span className="material-symbols-outlined text-6xl text-outline-variant/20">search_off</span>
+            <p className="font-serif text-xl italic text-on-surface-variant/40">Tsy misy tononkalo hita.</p>
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm("")}
+                className="font-sans text-sm text-primary hover:underline"
+              >
+                Hanadio ny fikarohana
+              </button>
+            )}
+          </div>
         )}
 
+        {/* Load More / Pagination */}
         {poems.length > 0 && (
           <div className="mt-16 flex justify-center">
-            <Link href="/archive">
-              <Button variant="secondary" className="group">
-                Hijery pejy hafa
-                <span className="material-symbols-outlined ml-2 text-[18px] transition-transform group-hover:translate-y-1">
-                  expand_more
-                </span>
+            {hasMore ? (
+              <Button 
+                variant="secondary" 
+                className="group"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin mr-2 text-[18px]">progress_activity</span>
+                    Mampiditra...
+                  </>
+                ) : (
+                  <>
+                    Hijery pejy hafa
+                    <span className="material-symbols-outlined ml-2 text-[18px] transition-transform group-hover:translate-y-1">
+                      expand_more
+                    </span>
+                  </>
+                )}
               </Button>
-            </Link>
+            ) : (
+              <p className="font-serif text-sm italic text-on-surface-variant/40">
+                Ireo rehetra no tononkalo hita.
+              </p>
+            )}
           </div>
         )}
       </main>

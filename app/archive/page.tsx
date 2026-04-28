@@ -1,47 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PoemCard from "@/components/poems/PoemCard";
 import MoodChip from "@/components/ui/MoodChip";
-import { getPoems } from "@/lib/firebase/firestore";
-import { Poem } from "@/types";
+import Button from "@/components/ui/Button";
+import PoemCardSkeleton from "@/components/poems/PoemCardSkeleton";
+import { usePoems } from "@/hooks/usePoems";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { useState } from "react";
 
 export default function ArchivePage() {
-  const [poems, setPoems] = useState<Poem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeMood, setActiveMood] = useState("Rehetra");
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    const fetchArchive = async () => {
-      setLoading(true);
-      try {
-        const filter: { mood?: string; search?: string } = activeMood !== "Rehetra" ? { mood: activeMood } : {};
-        if (searchTerm) filter.search = searchTerm;
-        const data = await getPoems({ ...filter, limit: 20 });
-        setPoems(data);
-      } catch (error) {
-        console.error("Nisy fahadisoana teo am-pampidirana ny tahiry:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { poems, loading, loadingMore, hasMore, loadMore } = usePoems({
+    mood: activeMood !== "Rehetra" ? activeMood : undefined,
+    search: searchTerm || undefined,
+    limit: 12,
+  });
 
-    const timer = setTimeout(() => {
-      fetchArchive();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [activeMood, searchTerm]);
+  const poemIds = useMemo(() => poems.map(p => p.id), [poems]);
+  const { isBookmarked, toggle: toggleBookmark } = useBookmarks(poemIds);
 
   return (
     <>
       <Header />
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-8 py-16">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-4 md:px-8 py-8 md:py-16">
         <section className="mx-auto flex w-full max-w-reading-column flex-col items-center gap-8 text-center">
-          <h1 className="font-serif text-5xl tracking-tight text-primary">Ny Tahiry</h1>
+          <h1 className="font-serif text-4xl md:text-5xl tracking-tight text-primary">Ny Tahiry</h1>
           <p className="font-serif text-xl italic text-on-surface-variant/80">
             Hikaroka andininy, bitsika ary akon&apos;ny lasa.
           </p>
@@ -54,7 +42,7 @@ export default function ArchivePage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Hikaroka amin&apos;ny alalan&apos;ny lohateny, mpanoratra na eritreritra..."
+              placeholder="Hikaroka amin'ny alalan'ny lohateny, mpanoratra na eritreritra..."
               className="w-full border-b border-outline-variant bg-transparent py-4 pl-10 pr-4 font-serif text-lg italic outline-none transition-all focus:border-primary placeholder:text-on-surface-variant/40"
             />
           </div>
@@ -74,7 +62,9 @@ export default function ArchivePage() {
         </section>
 
         {loading ? (
-          <div className="py-20 text-center font-serif text-xl italic text-on-surface-variant/60">Manokatra ny boky...</div>
+          <section className="columns-1 gap-8 space-y-8 md:columns-2 lg:columns-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => <PoemCardSkeleton key={i} />)}
+          </section>
         ) : poems.length > 0 ? (
           <section className="columns-1 gap-8 space-y-8 md:columns-2 lg:columns-3">
             {poems.map((poem) => (
@@ -88,18 +78,49 @@ export default function ArchivePage() {
                 moods={poem.moods}
                 likesCount={poem.likesCount}
                 imageUrl={poem.imageUrl}
+                isBookmarked={isBookmarked(poem.id)}
+                onToggleBookmark={toggleBookmark}
               />
             ))}
           </section>
         ) : (
-          <div className="py-20 text-center font-serif text-xl italic text-on-surface-variant/40">Mbola foana ny tahiry.</div>
+          <div className="flex flex-col items-center gap-6 py-20 text-center">
+            <span className="material-symbols-outlined text-6xl text-outline-variant/20">library_books</span>
+            <p className="font-serif text-xl italic text-on-surface-variant/40">Mbola foana ny tahiry.</p>
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm("")}
+                className="font-sans text-sm text-primary hover:underline"
+              >
+                Hanadio ny fikarohana
+              </button>
+            )}
+          </div>
         )}
 
+        {/* Load More */}
         {poems.length > 0 && (
           <div className="flex justify-center">
-            <button className="rounded border border-outline-variant px-8 py-4 font-sans text-sm font-semibold uppercase tracking-widest text-primary transition-colors hover:border-primary">
-              Hampiditra andininy hafa
-            </button>
+            {hasMore ? (
+              <Button 
+                variant="secondary"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin mr-2 text-[18px]">progress_activity</span>
+                    Mampiditra...
+                  </>
+                ) : (
+                  "Hampiditra andininy hafa"
+                )}
+              </Button>
+            ) : (
+              <p className="font-serif text-sm italic text-on-surface-variant/40">
+                Ireo rehetra no andininy ao amin&apos;ny tahiry.
+              </p>
+            )}
           </div>
         )}
       </main>

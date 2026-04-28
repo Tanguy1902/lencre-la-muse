@@ -27,6 +27,16 @@ export default function Header() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isMenuOpen]);
+
   const navLinks = [
     { name: "Hizaha", href: "/discover" },
     { name: "Tahiry", href: "/archive" },
@@ -123,9 +133,9 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu Overlay */}
+        {/* Mobile Menu Overlay — with slide animation */}
         {isMenuOpen && (
-          <div className="fixed inset-x-0 top-16 z-40 h-[calc(100vh-64px)] bg-surface p-6 md:hidden">
+          <div className="fixed inset-x-0 top-16 z-40 h-[calc(100vh-64px)] bg-surface p-6 md:hidden mobile-menu-enter">
             <nav className="flex flex-col gap-6">
               {/* Search button in mobile menu */}
               <button 

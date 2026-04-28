@@ -8,18 +8,30 @@ interface ImageUploadProps {
   value?: string;
 }
 
+/**
+ * Injects Cloudinary on-the-fly transformations into an upload URL.
+ * Converts: .../upload/v123/file.jpg → .../upload/c_limit,w_1200,q_auto,f_auto/v123/file.jpg
+ * This gives us: auto format (webp/avif), auto quality, max 1200px width.
+ */
+function optimizeCloudinaryUrl(url: string): string {
+  const transformations = "c_limit,w_1200,q_auto,f_auto";
+  return url.replace("/upload/", `/upload/${transformations}/`);
+}
+
 export default function ImageUpload({ onUpload, value }: ImageUploadProps) {
   return (
     <CldUploadWidget
       uploadPreset="ml_default2"
       onSuccess={(result) => {
         if (result.event === "success" && typeof result.info === "object" && result.info && "secure_url" in result.info) {
-          onUpload(result.info.secure_url as string);
+          const rawUrl = (result.info as Record<string, unknown>).secure_url as string;
+          onUpload(optimizeCloudinaryUrl(rawUrl));
         }
       }}
       options={{
         maxFiles: 1,
-        clientAllowedFormats: ["png", "jpg", "jpeg", "webp"],
+        maxFileSize: 10_000_000, // 10MB max
+        clientAllowedFormats: ["png", "jpg", "jpeg", "webp", "avif"],
         styles: {
           palette: {
             window: "#FFFFFF",

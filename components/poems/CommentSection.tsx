@@ -7,6 +7,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { addComment, getComments } from "@/lib/firebase/firestore";
 import { Comment } from "@/types";
 import Button from "@/components/ui/Button";
+import { validateComment, LIMITS } from "@/lib/utils/validation";
 
 interface CommentSectionProps {
   poemId: string;
@@ -36,6 +37,9 @@ export default function CommentSection({ poemId }: CommentSectionProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newComment.trim() || isSubmitting) return;
+
+    const errors = validateComment(newComment);
+    if (errors.length > 0) return;
 
     setIsSubmitting(true);
     try {
@@ -81,12 +85,20 @@ export default function CommentSection({ poemId }: CommentSectionProps) {
                 </span>
               )}
             </div>
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Zarao ny tsapanao..."
-              className="min-h-[100px] w-full bg-transparent font-serif text-lg italic outline-none placeholder:text-on-surface-variant/30"
-            />
+            <div className="relative w-full">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Zarao ny tsapanao..."
+                maxLength={LIMITS.COMMENT_MAX + 10}
+                className="min-h-[100px] w-full bg-transparent font-serif text-lg italic outline-none placeholder:text-on-surface-variant/30"
+              />
+              {newComment.length > LIMITS.COMMENT_MAX * 0.8 && (
+                <span className={`absolute right-0 bottom-0 font-sans text-[10px] ${newComment.length > LIMITS.COMMENT_MAX ? 'char-count-error' : 'char-count-warn'}`}>
+                  {newComment.length}/{LIMITS.COMMENT_MAX}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex justify-end">
             <Button variant="primary" disabled={!newComment.trim() || isSubmitting}>

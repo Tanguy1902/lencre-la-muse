@@ -8,12 +8,16 @@ import {
   query, 
   where, 
   orderBy, 
-  limit, 
+  limit as firestoreLimit, 
   serverTimestamp,
   increment,
   setDoc,
   deleteDoc,
-  writeBatch
+  writeBatch,
+  runTransaction,
+  startAfter,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "./config";
 import { Poem, User, Comment } from "@/types";
@@ -26,6 +30,14 @@ export const createUserProfile = async (uid: string, data: Partial<User>) => {
     ...data,
     updatedAt: serverTimestamp(),
   }, { merge: true });
+};
+
+export const updateUserProfile = async (uid: string, data: Partial<User>) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
 };
 
 export const getUserProfile = async (uid: string) => {
@@ -85,8 +97,37 @@ export const getPoem = async (poemId: string) => {
   return null;
 };
 
-export const getPoems = async (filter?: { mood?: string; authorId?: string; status?: "published" | "draft"; limit?: number; search?: string }) => {
+// --- Paginated Poems ---
+
+export interface PoemQueryResult {
+  poems: Poem[];
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+  hasMore: boolean;
+}
+
+export const getPoems = async (filter?: { 
+  mood?: string; 
+  authorId?: string; 
+  status?: "published" | "draft"; 
+  limit?: number; 
+  search?: string;
+  lastDoc?: QueryDocumentSnapshot<DocumentData>;
+}): Promise<Poem[]> => {
+  const result = await getPoemsPaginated(filter);
+  return result.poems;
+};
+
+export const getPoemsPaginated = async (filter?: { 
+  mood?: string; 
+  authorId?: string; 
+  status?: "published" | "draft"; 
+  limit?: number; 
+  search?: string;
+  lastDoc?: QueryDocumentSnapshot<DocumentData>;
+}): Promise<PoemQueryResult> => {
   const status = filter?.status || "published";
+  const pageSize = filter?.limit || 10;
+  
   let q = query(collection(db, "poems"), where("status", "==", status), orderBy("createdAt", "desc"));
   
   if (filter?.mood) {
@@ -96,13 +137,20 @@ export const getPoems = async (filter?: { mood?: string; authorId?: string; stat
   if (filter?.authorId) {
     q = query(q, where("authorId", "==", filter.authorId));
   }
-  
-  if (filter?.limit) {
-    q = query(q, limit(filter.limit));
+
+  if (filter?.lastDoc) {
+    q = query(q, startAfter(filter.lastDoc));
   }
   
+  // Fetch one extra to know if there are more
+  q = query(q, firestoreLimit(pageSize + 1));
+  
   const querySnapshot = await getDocs(q);
-  let poems = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Poem));
+  const docs = querySnapshot.docs;
+  const hasMore = docs.length > pageSize;
+  const trimmedDocs = hasMore ? docs.slice(0, pageSize) : docs;
+  
+  let poems = trimmedDocs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Poem));
 
   if (filter?.search) {
     const searchLower = filter.search.toLowerCase();
@@ -112,32 +160,76 @@ export const getPoems = async (filter?: { mood?: string; authorId?: string; stat
     );
   }
 
-  return poems;
+  return {
+    poems,
+    lastDoc: trimmedDocs.length > 0 ? trimmedDocs[trimmedDocs.length - 1] : null,
+    hasMore,
+  };
 };
 
-export const toggleLike = async (poemId: string, userId: string): Promise<boolean> => {
-  const likeRef = doc(db, "poems", poemId, "likes", userId);
-  const likeSnap = await getDoc(likeRef);
-  const poemRef = doc(db, "poems", poemId);
-  
-  if (likeSnap.exists()) {
-    // Unlike
-    await deleteDoc(likeRef);
-    await updateDoc(poemRef, {
-      likesCount: increment(-1)
-    });
-    return false;
-  } else {
-    // Like
-    await setDoc(likeRef, {
-      userId,
-      createdAt: serverTimestamp(),
-    });
-    await updateDoc(poemRef, {
-      likesCount: increment(1)
-    });
-    return true;
+// --- Poem of the Day ---
+
+export const getPoemOfDay = async (): Promise<Poem | null> => {
+  // First try: explicitly flagged poem
+  const flaggedQuery = query(
+    collection(db, "poems"),
+    where("status", "==", "published"),
+    where("isPoemOfDay", "==", true),
+    firestoreLimit(1)
+  );
+  const flaggedSnap = await getDocs(flaggedQuery);
+  if (!flaggedSnap.empty) {
+    const doc = flaggedSnap.docs[0];
+    return { id: doc.id, ...doc.data() } as unknown as Poem;
   }
+
+  // Fallback: deterministic pick based on date hash
+  const allPublished = query(
+    collection(db, "poems"),
+    where("status", "==", "published"),
+    orderBy("createdAt", "desc"),
+    firestoreLimit(20)
+  );
+  const allSnap = await getDocs(allPublished);
+  if (allSnap.empty) return null;
+
+  const poems = allSnap.docs;
+  const today = new Date();
+  const dayHash = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+  const index = dayHash % poems.length;
+  const chosen = poems[index];
+  return { id: chosen.id, ...chosen.data() } as unknown as Poem;
+};
+
+// --- Like (Atomic Transaction) ---
+
+export const toggleLike = async (poemId: string, userId: string): Promise<boolean> => {
+  return runTransaction(db, async (transaction) => {
+    const likeRef = doc(db, "poems", poemId, "likes", userId);
+    const poemRef = doc(db, "poems", poemId);
+    const likeSnap = await transaction.get(likeRef);
+    
+    if (likeSnap.exists()) {
+      // Unlike
+      transaction.delete(likeRef);
+      transaction.update(poemRef, { 
+        likesCount: increment(-1),
+        updatedAt: serverTimestamp(),
+      });
+      return false;
+    } else {
+      // Like
+      transaction.set(likeRef, {
+        userId,
+        createdAt: serverTimestamp(),
+      });
+      transaction.update(poemRef, { 
+        likesCount: increment(1),
+        updatedAt: serverTimestamp(),
+      });
+      return true;
+    }
+  });
 };
 
 export const isLiked = async (userId: string, poemId: string): Promise<boolean> => {
@@ -149,15 +241,21 @@ export const isLiked = async (userId: string, poemId: string): Promise<boolean> 
 // --- Comments ---
 
 export const addComment = async (poemId: string, commentData: Partial<Comment>) => {
-  const commentRef = collection(db, "poems", poemId, "comments");
-  await addDoc(commentRef, {
-    ...commentData,
-    createdAt: serverTimestamp(),
-  });
-  
-  const poemRef = doc(db, "poems", poemId);
-  await updateDoc(poemRef, {
-    commentsCount: increment(1)
+  return runTransaction(db, async (transaction) => {
+    const commentRef = doc(collection(db, "poems", poemId, "comments"));
+    const poemRef = doc(db, "poems", poemId);
+    
+    transaction.set(commentRef, {
+      ...commentData,
+      createdAt: serverTimestamp(),
+    });
+    
+    transaction.update(poemRef, {
+      commentsCount: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+    
+    return commentRef.id;
   });
 };
 
@@ -170,28 +268,47 @@ export const getComments = async (poemId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Comment));
 };
 
-// --- Bookmarks (Recueil) ---
+// --- Bookmarks (Recueil) — Atomic ---
 
 export const toggleBookmark = async (userId: string, poemId: string) => {
-  const bookmarkRef = doc(db, "users", userId, "bookmarks", poemId);
-  const bookmarkSnap = await getDoc(bookmarkRef);
-  
-  if (bookmarkSnap.exists()) {
-    await deleteDoc(bookmarkRef);
-    return false; // Retiré
-  } else {
-    await setDoc(bookmarkRef, {
-      poemId,
-      createdAt: serverTimestamp(),
-    });
-    return true; // Ajouté
-  }
+  return runTransaction(db, async (transaction) => {
+    const bookmarkRef = doc(db, "users", userId, "bookmarks", poemId);
+    const bookmarkSnap = await transaction.get(bookmarkRef);
+    
+    if (bookmarkSnap.exists()) {
+      transaction.delete(bookmarkRef);
+      return false; // Retiré
+    } else {
+      transaction.set(bookmarkRef, {
+        poemId,
+        createdAt: serverTimestamp(),
+      });
+      return true; // Ajouté
+    }
+  });
 };
 
 export const isBookmarked = async (userId: string, poemId: string) => {
   const bookmarkRef = doc(db, "users", userId, "bookmarks", poemId);
   const bookmarkSnap = await getDoc(bookmarkRef);
   return bookmarkSnap.exists();
+};
+
+// --- Batch Bookmark Check ---
+
+export const getBookmarkStatuses = async (userId: string, poemIds: string[]): Promise<Record<string, boolean>> => {
+  if (poemIds.length === 0) return {};
+  const statuses: Record<string, boolean> = {};
+  
+  await Promise.all(
+    poemIds.map(async (poemId) => {
+      const bookmarkRef = doc(db, "users", userId, "bookmarks", poemId);
+      const bookmarkSnap = await getDoc(bookmarkRef);
+      statuses[poemId] = bookmarkSnap.exists();
+    })
+  );
+  
+  return statuses;
 };
 
 export const getBookmarkedPoems = async (userId: string) => {
@@ -213,22 +330,30 @@ export const getBookmarkedPoems = async (userId: string) => {
   return poems.filter(p => p !== null) as Poem[];
 };
 
-// --- Follow System ---
+// --- Follow System (Atomic) ---
 
 export const followUser = async (followerId: string, followedId: string) => {
+  const batch = writeBatch(db);
+  
   const followRef = doc(db, "users", followedId, "followers", followerId);
   const followingRef = doc(db, "users", followerId, "following", followedId);
   
-  await setDoc(followRef, { createdAt: serverTimestamp() });
-  await setDoc(followingRef, { createdAt: serverTimestamp() });
+  batch.set(followRef, { createdAt: serverTimestamp() });
+  batch.set(followingRef, { createdAt: serverTimestamp() });
+  
+  await batch.commit();
 };
 
 export const unfollowUser = async (followerId: string, followedId: string) => {
+  const batch = writeBatch(db);
+  
   const followRef = doc(db, "users", followedId, "followers", followerId);
   const followingRef = doc(db, "users", followerId, "following", followedId);
   
-  await deleteDoc(followRef);
-  await deleteDoc(followingRef);
+  batch.delete(followRef);
+  batch.delete(followingRef);
+  
+  await batch.commit();
 };
 
 export const isFollowing = async (followerId: string, followedId: string) => {

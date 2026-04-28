@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useToast } from "@/components/ui/Toast";
-import { toggleBookmark, isBookmarked as checkBookmark } from "@/lib/firebase/firestore";
+import { toggleBookmark as toggleBookmarkFn } from "@/lib/firebase/firestore";
 
 interface PoemCardProps {
   id: string;
@@ -18,6 +18,9 @@ interface PoemCardProps {
   imageUrl?: string;
   showDeleteButton?: boolean;
   onDelete?: (id: string) => void;
+  // Controlled bookmark state from parent (batch)
+  isBookmarked?: boolean;
+  onToggleBookmark?: (poemId: string) => Promise<void>;
 }
 
 export default function PoemCard({
@@ -31,17 +34,16 @@ export default function PoemCard({
   imageUrl,
   showDeleteButton = false,
   onDelete,
+  isBookmarked: controlledBookmarked,
+  onToggleBookmark,
 }: PoemCardProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const [bookmarked, setBookmarked] = useState(false);
+  const [localBookmarked, setLocalBookmarked] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      checkBookmark(user.uid, id).then(setBookmarked);
-    }
-  }, [id, user]);
+  // Use controlled state from parent if available, otherwise local state
+  const bookmarked = controlledBookmarked !== undefined ? controlledBookmarked : localBookmarked;
 
   const handleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -51,19 +53,25 @@ export default function PoemCard({
       return;
     }
     
-    setIsActionLoading(true);
-    try {
-      const status = await toggleBookmark(user.uid, id);
-      setBookmarked(status);
-      showToast(
-        status ? "Voatahiry ao amin'ny tahirinao" : "Voaesotra tao amin'ny tahirinao",
-        "success"
-      );
-    } catch (error) {
-      console.error("Fahadisoana teo am-pitahirizana:", error);
-      showToast("Nisy fahadisoana teo am-pitahirizana", "error");
-    } finally {
-      setIsActionLoading(false);
+    if (onToggleBookmark) {
+      // Use parent's batch handler
+      await onToggleBookmark(id);
+    } else {
+      // Fallback to local handling
+      setIsActionLoading(true);
+      try {
+        const status = await toggleBookmarkFn(user.uid, id);
+        setLocalBookmarked(status);
+        showToast(
+          status ? "Voatahiry ao amin'ny tahirinao" : "Voaesotra tao amin'ny tahirinao",
+          "success"
+        );
+      } catch (error) {
+        console.error("Fahadisoana teo am-pitahirizana:", error);
+        showToast("Nisy fahadisoana teo am-pitahirizana", "error");
+      } finally {
+        setIsActionLoading(false);
+      }
     }
   };
 

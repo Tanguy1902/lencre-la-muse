@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
+import { sanitizeHTML } from "@/lib/utils/sanitize";
 
 interface PoemOfDayProps {
   id: string;
@@ -19,6 +22,8 @@ export default function PoemOfDay({
   excerpt,
   imageUrl,
 }: PoemOfDayProps) {
+  const safeExcerpt = sanitizeHTML(excerpt);
+
   return (
     <section className="mb-20 overflow-hidden border border-outline-variant bg-surface-container-lowest">
       <div className="flex flex-col md:flex-row">
@@ -44,19 +49,25 @@ export default function PoemOfDay({
             <div className="mb-8 md:mb-10 border-l border-outline-variant pl-4 md:pl-6">
               <div 
                 className="font-serif text-lg md:text-xl italic leading-relaxed text-on-surface-variant/80"
-                dangerouslySetInnerHTML={{ __html: excerpt }}
+                dangerouslySetInnerHTML={{ __html: safeExcerpt }}
               />
             </div>
 
             <div className="mt-auto flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative h-10 w-10 md:h-12 md:w-12 overflow-hidden rounded-full border border-outline-variant bg-surface-container-high">
-                  <Image
-                    src={authorImage}
-                    alt={author}
-                    fill
-                    className="object-cover"
-                  />
+                  {authorImage ? (
+                    <Image
+                      src={authorImage}
+                      alt={author}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="material-symbols-outlined flex h-full w-full items-center justify-center text-outline text-2xl">
+                      account_circle
+                    </span>
+                  )}
                 </div>
                 <div>
                   <span className="block font-sans text-xs md:text-sm font-medium text-on-surface">
@@ -81,14 +92,16 @@ export default function PoemOfDay({
         </div>
 
         {/* Image Side */}
-        <div className="relative hidden w-2/5 min-h-[400px] border-l border-outline-variant lg:block">
-          <Image
-            src={imageUrl}
-            alt="Abstract artistic representation"
-            fill
-            className="object-cover opacity-90 mix-blend-multiply filter contrast-125 sepia-[.2]"
-          />
-        </div>
+        {imageUrl && (
+          <div className="relative hidden w-2/5 min-h-[400px] border-l border-outline-variant lg:block">
+            <Image
+              src={imageUrl}
+              alt="Abstract artistic representation"
+              fill
+              className="object-cover opacity-90 mix-blend-multiply filter contrast-125 sepia-[.2]"
+            />
+          </div>
+        )}
       </div>
     </section>
   );
